@@ -43,7 +43,7 @@ If you notice any bugs or want to request a feature please do so on BitBucket - 
 
 == Installation ==
 
-1. Upload the contents of `wordpress-dropbox-backup-0.7.zip` to the `/wp-content/plugins/` directory or use WordPress' built-in plugin upload tool
+1. Upload the contents of `wordpress-dropbox-backup.zip` to the `/wp-content/plugins/` directory or use WordPress' built-in plugin upload tool
 2. Activate the plugin through the 'Plugins' menu in WordPress
 3. Authorize the plugin with Dropbox by following the instructions in the settings page found under Settings->Backup to Dropbox
 
