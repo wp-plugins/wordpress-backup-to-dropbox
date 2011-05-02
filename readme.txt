@@ -22,12 +22,17 @@ The plugin uses [OAuth](http://en.wikipedia.org/wiki/OAuth) so your Dropbox acco
 plugin to gain access.
 
 Once installed, the authorization process is pretty easy -
+
 1. The plugin will ask you to authorize the plugin with Dropbox.
+
 2. A new window open where Dropbox will ask you to authenticate in order allow this plugin access to your Dropbox.
+
 3. Once you have granted access to the plugin click continue to setup your backup
 
 Minimum Requirements -
+
 1. PHP 5.2 or higher with zip support
+
 2. [A Dropbox account](https://www.dropbox.com/referrals/NTM1NTcwNjc5)
 
 For more information, news and updates please visit my blog - http://www.mikeyd.com.au/wordpress-backup-to-dropbox/
