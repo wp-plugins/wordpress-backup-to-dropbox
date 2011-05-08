@@ -64,6 +64,15 @@ blog is accessed after the scheduled time.
 
 == Changelog ==
 
+= 0.7.1 =
+* Fixed issue #3: Backup starts but fails without an error message due to the zip process running out of memory
+* Removed 'double zipping' of archive. Now the SQL dump will appear in 'wp-content/backups'
+* Fixed an issue where backup now was removing periodic backups
+* Added upload started history item
+* Added create database statement to db dump
+* Added error messages for missing required php extensions
+* Removed extra 'the' resolves issue #7
+
 = 0.7 =
 * Added feature #4: Backup now button
 * Fixed issue #2: Allow legitimately empty tables in backup
@@ -75,4 +84,4 @@ blog is accessed after the scheduled time.
 
 == Upgrade Notice ==
 
-* This version fixes several bugs and adds a few nice features so updating is highly recommended
+* This version fixees a critical bug in the zip process that causes large WordPress installations to fail creating a backup archive

@@ -19,6 +19,16 @@
  *          Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110, USA.
  */
 try {
+    if ( !function_exists( 'memory_get_usage' ) ) {
+	    throw new Exception(
+            sprintf( __( "THe enable memory limit configuration setting is required by this plugin. Please recompile PHP with this setting enabled. Click %s for more information." ),
+                '<a href="http://www.php.net/manual/en/ini.core.php#ini.memory-limit">' . __( 'here' ) . '</a>' ) );
+	}
+    if ( !extension_loaded( 'zip' ) ) {
+        throw new Exception(
+            sprintf( __( 'The php zip extension is required by this plugin. Please install and activate it. Click %s for more information.' ),
+                 '<a href="http://www.php.net/manual/en/zip.installation.php">' . __( 'here' ) . '</a>' ) );
+    }
     $backup = new WP_Backup();
     $dropbox = new Dropbox_Facade();
 
@@ -107,6 +117,9 @@ try {
                     switch ( $status ) {
 						case WP_Backup::BACKUP_STATUS_STARTED:
                         	echo "<span class='backup_success'>" . sprintf( __( 'Backup started on %s at %s' ), $backup_date, $backup_time ) . "</span><br />";
+							break;
+                        case WP_Backup::BACKUP_STATUS_UPLOADING:
+							echo "<span class='backup_success'>" . sprintf( __( 'Backup upload started on %s at %s' ), $backup_date, $backup_time ) . "</span><br />";
 							break;
 						case WP_Backup::BACKUP_STATUS_SUCCESS:
 							echo "<span class='backup_success'>" . sprintf( __( 'Backup successfully completed on %s at %s' ), $backup_date, $backup_time ) . "</span><br />";
@@ -213,7 +226,7 @@ try {
                         <option value="23:00" <?php echo $time == '23:00' ? ' selected="selected"' : "" ?>>23:00
                         </option>
                     </select>
-                    <span class="description"><?php _e( 'The day and time the the backup to Dropbox is to be performed.' ); ?></span>
+                    <span class="description"><?php _e( 'The day and time the backup to Dropbox is to be performed.' ); ?></span>
                 </td>
             </tr>
             <tr valign="top">
@@ -221,22 +234,22 @@ try {
                 <td>
                     <select id="frequency" name="frequency">
 						<option value="daily" <?php echo $frequency == 'daily' ? ' selected="selected"' : "" ?>>
-                            <? _e( 'Daily' ) ?>
+                            <?php _e( 'Daily' ) ?>
                         </option>
                         <option value="weekly" <?php echo $frequency == 'weekly' ? ' selected="selected"' : "" ?>>
-                            <? _e( 'Weekly' ) ?>
+                            <?php _e( 'Weekly' ) ?>
                         </option>
                         <option value="fortnightly" <?php echo $frequency == 'fortnightly' ? ' selected="selected"' : "" ?>>
-                            <? _e( 'Fortnightly' ) ?>
+                            <?php _e( 'Fortnightly' ) ?>
                         </option>
                         <option value="monthly" <?php echo $frequency == 'monthly' ? ' selected="selected"' : "" ?>>
-                            <? _e( 'Every 4 weeks' ) ?>
+                            <?php _e( 'Every 4 weeks' ) ?>
                         </option>
                         <option value="two_monthly" <?php echo $frequency == 'two_monthly' ? ' selected="selected"' : "" ?>>
-                            <? _e( 'Every 8 weeks' ) ?>
+                            <?php _e( 'Every 8 weeks' ) ?>
                         </option>
                         <option value="three_monthly" <?php echo $frequency == 'three_monthly' ? ' selected="selected"' : "" ?>>
-                            <? _e( 'Every 12 weeks' ) ?>
+                            <?php _e( 'Every 12 weeks' ) ?>
                         </option>
                     </select>
                     <span class="description"><?php _e( 'How often the backup to Dropbox is to be performed.' ); ?></span>
