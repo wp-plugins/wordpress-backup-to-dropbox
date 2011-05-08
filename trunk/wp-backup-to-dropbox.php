@@ -3,7 +3,7 @@
 Plugin Name: WordPress Backup to Dropbox
 Plugin URI: http://www.mikeyd.com.au/wordpress-backup-to-dropbox/
 Description: A plugin for WordPress that automatically creates a backup your blog and uploads it to Dropbox.
-Version: 0.7
+Version: 0.7.1
 Author: Michael De Wildt
 Author URI: http://www.mikeyd.com.au
 License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
@@ -24,7 +24,7 @@ License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
 include( 'class-dropbox-facade.php' );
 include( 'class-wp-backup.php' );
 
-define( 'BACKUP_TO_DROPBOX_VERSION', '0.7' );
+define( 'BACKUP_TO_DROPBOX_VERSION', '0.7.1' );
 
 //We need to set the PEAR_Includes folder in the path
 ini_set( 'include_path', DEFAULT_INCLUDE_PATH . PATH_SEPARATOR  . dirname( __FILE__ ) . '/PEAR_Includes' );
@@ -56,7 +56,7 @@ function execute_drobox_backup() {
     try {
         $dropbox = new Dropbox_Facade();
 		if ( !$dropbox->is_authorized() ) {
-			$backup->set_history( false, "your Dropbox account is not authorized yet." );
+			$backup->set_history( WP_Backup::BACKUP_STATUS_ERROR, "your Dropbox account is not authorized yet." );
 			return;
 		}
 		
@@ -69,8 +69,23 @@ function execute_drobox_backup() {
 		list( $dump_location, $dropbox_location, $keep_local, $count ) = $backup->get_options();
 		$backup_file = ABSPATH . $dump_location . '/' . $file;
 
-		$dropbox->upload_backup( $dropbox_location . '/' . $file, $backup_file, $count );
+        $backup->set_history( WP_Backup::BACKUP_STATUS_UPLOADING );
+
+        $memory_needed = round( ( filesize( $backup_file ) / 1048576 ) * 2.5 );
+        $memory_limit = ( int )preg_replace( '/\D/', '', ini_get( 'memory_limit' ) );
+
+        if ( $memory_needed > $memory_limit ) {
+            if ( !ini_set( 'memory_limit', $memory_limit . 'M' ) ) {
+                $backup->set_history( WP_Backup::BACKUP_STATUS_ERROR,
+                                      sprintf( __( 'failed to set the php memory limit to %sM. More memory is required to upload this backup.'),
+                                          $memory_needed ) );
+                return;
+            }
+        }
+
+        $dropbox->upload_backup( $dropbox_location . '/' . $file, $backup_file, $count );
 		$dropbox->purge_backups( $dropbox_location, $count );
+        
 		$backup->set_history( WP_Backup::BACKUP_STATUS_SUCCESS );
 
 		if ( $keep_local ) {
@@ -122,4 +137,5 @@ function backup_to_dropbox_cron_schedules( $schedules ) {
 //WordPress filters and actions
 add_filter( 'cron_schedules', 'backup_to_dropbox_cron_schedules' );
 add_action( 'execute_periodic_drobox_backup', 'execute_drobox_backup' );
+add_action( 'execute_instant_drobox_backup', 'execute_drobox_backup' );
 add_action( 'admin_menu', 'backup_to_dropbox_admin_menu' );

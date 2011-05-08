@@ -23,6 +23,7 @@ class WP_Backup {
 	const BACKUP_STATUS_STARTED = 0;
 	const BACKUP_STATUS_SUCCESS = 1;
 	const BACKUP_STATUS_ERROR = 2;
+    const BACKUP_STATUS_UPLOADING = 3;
 
     /**
      * The users Dropbox options
@@ -76,100 +77,141 @@ class WP_Backup {
     /**
      * Zips up all the files within this wordpress installation, compresses them and then saves the compressed
      * archive on the server.
-     * Source: http://stackoverflow.com/questions/1334613/how-to-recursively-zip-a-directory-in-php
+     * Original Source: http://stackoverflow.com/questions/1334613/how-to-recursively-zip-a-directory-in-php
      * @return string - Path to the database dump
      */
-    public function backup_website() {
-        $source = ABSPATH;
+    public function backup_website( $destination ) {
         list( $dump_location, , , ) = $this->get_options();
-        $date = date( 'Y-m-d', strtotime( current_time( 'mysql' ) ) );
-        $destination = "$source/$dump_location/website-backup-$date.zip";
-        $exclude = $source . $dump_location . '/';
+        $exclude = ABSPATH . $dump_location . '/wordpress-backup';
         if ( PHP_OS == 'WINNT' ) {
             $exclude = str_replace( '/', '\\', $exclude );
         }
-        if ( extension_loaded( 'zip' ) === true ) {
-            if ( file_exists( $source ) === true ) {
-                $zip = new ZipArchive();
-                if ( $zip->open( $destination, ZIPARCHIVE::CREATE ) === true ) {
-                    $source = realpath( $source );
-                    if ( is_dir( $source ) === true ) {
-                        $files = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $source ), RecursiveIteratorIterator::SELF_FIRST );
-                        foreach ( $files as $file ) {
-                            $file = realpath( $file );
-                            if ( !strstr( $file, $exclude ) ) {
-                                if ( is_dir( $file ) === true ) {
-                                    $zip->addEmptyDir( str_replace( $source . '/', '', $file . '/' ) );
-                                } else if ( is_file( $file ) === true ) {
-                                    $zip->addFromString( str_replace( $source . '/', '', $file ), file_get_contents( $file ) );
-                                }
-                            }
+
+        //Grab the memory limit setting in the php ini to ensure we do not exceed it
+        $memory_limit_string = ini_get( 'memory_limit' );
+        $memory_limit = ( preg_replace( '/\D/', '', $memory_limit_string ) * 1048576 );
+        $close_limit = $memory_limit / 3;
+        $max_file_size = $memory_limit / 2;
+        
+		$zip = null;
+        if ( file_exists( ABSPATH ) ) {
+            $source = realpath( ABSPATH );
+            if ( is_dir( $source ) ) {
+                $files = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $source ), RecursiveIteratorIterator::SELF_FIRST );
+                foreach ( $files as $file ) {
+                    $file = realpath( $file );
+
+                    //We need to check that the file size the we are trying to zip does not exceed half the available memory.
+                    //If it does then this code attempts to increase the php memory limit ini setting. If we cannot increase
+                    //the limit due to hosting constraints then there is nothing that can be done and the user will need to
+                    //either get their memory allowance increased or remove the offending file.
+                    $file_size = filesize( $file );
+                    if ( $file_size > $max_file_size ) {
+                        $new_limit = round( ( $file_size / 1048576 ) * 2.5 );
+                        if ( ini_set( 'memory_limit', $new_limit . 'M') ) {
+                            $close_limit = ( $new_limit * 1048576 ) / 3;
+                        } else {
+                            throw new Exception( __( 'Memory limit error adding a file to the zip archive. The plugin attempted to increase the memory limit automatically but failed due to server restrictions.' ) );
                         }
-                    } else if ( is_file( $source ) === true ) {
-                        $zip->addFromString( basename( $source ), file_get_contents( $source ) );
                     }
-                }
-                if ( $zip->close() ) {
-                    return $destination;
+
+                    if ( !strstr( $file, $exclude ) ) {
+                        //Open the zip archive and add a file
+						if ( !$zip ) {
+							$zip = new ZipArchive();
+							if ( !$zip->open( $destination, ZipArchive::CREATE ) ) {
+								throw new Exception( __( 'error opening zip archive.' ) . ' (ERROR_1)' );
+							}
+						}
+
+                        if ( is_dir( $file ) ) {
+                            $zip->addEmptyDir( str_replace( $source . '/', '', $file . '/' ) );
+                        } else if ( is_file( $file ) ) {
+                            $zip->addFromString( str_replace( $source . '/', '', $file ), file_get_contents( $file ) );
+                        }
+
+						//When we reach the memory limit close the zip archive so the data is written to the hard drive
+						if ( memory_get_usage( true ) > $close_limit ) {
+							if ( !$zip->close() ) {
+								throw new Exception( __( 'error closing zip archive' ) . ' (ERROR_2)' );
+							}
+							unset( $zip, $file );
+                            $zip = null;
+						}
+                    }
                 }
             }
         }
-        throw new Exception( __( 'error while creating the website archive' ) );
+		unset( $zip, $file, $files );
+        return true;
     }
 
     /**
-     * Backs up the current wordpress database and saves it to
+     * Backs up the current WordPress database and saves it to
      * @return string
      */
     public function backup_database() {
         global $wpdb;
 
         $db_error = __( 'error while accessing database.' );
-        $file_error = __( 'error while creating database archive.' );
 
         $tables = $wpdb->get_results( 'SHOW TABLES', ARRAY_N );
         if ( $tables === false ) {
-            throw new Exception( $db_error . ' (DB_01)' );
+            throw new Exception( $db_error . ' (ERROR_3)' );
+        }
+
+		list( $dump_location, , , ) = $this->get_options();
+        $date = date( 'Y-m-d', strtotime( current_time( 'mysql' ) ) );
+        $filename = ABSPATH . $dump_location . "/db-backup-$date.sql";
+        $handle = fopen( $filename, 'w+' );
+        if ( !$handle ) {
+            throw new Exception( __( 'error creating sql dump file.' ) . ' (ERROR_4)' );
         }
 
         //Some header information 
-        $out = "-- WordPress Backup to Dropbox SQL Dump\n";
-        $out .= "-- Version " . BACKUP_TO_DROPBOX_VERSION . "\n";
-        $out .= "-- http://www.mikeyd.com.au/wordpress-backup-to-dropbox/\n";
-        $out .= "-- Generation Time: " . date( "F j, Y" ) . " at " . date( "H:i" ) . "\n\n";
-        $out .= 'SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";' . "\n\n";
+        $this->write_to_file( $handle, "-- WordPress Backup to Dropbox SQL Dump\n" );
+        $this->write_to_file( $handle, "-- Version " . BACKUP_TO_DROPBOX_VERSION . "\n" );
+        $this->write_to_file( $handle, "-- http://www.mikeyd.com.au/wordpress-backup-to-dropbox/\n" );
+        $this->write_to_file( $handle, "-- Generation Time: " . date( "F j, Y" ) . " at " . date( "H:i" ) . "\n\n" );
+        $this->write_to_file( $handle, 'SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";' . "\n\n" );
 
         //I got this out of the phpMyAdmin database dump to make sure charset is correct
-        $out .= "/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;\n";
-        $out .= "/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;\n";
-        $out .= "/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;\n";
-        $out .= "/*!40101 SET NAMES utf8 */;\n\n";
+        $this->write_to_file( $handle, "/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;\n" );
+        $this->write_to_file( $handle, "/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;\n" );
+        $this->write_to_file( $handle, "/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;\n" );
+        $this->write_to_file( $handle, "/*!40101 SET NAMES utf8 */;\n\n" );
+
+        //Create database statement
+        $this->write_to_file( $handle, "--\n-- Create and use the backed up database\n--\n\n" );
+        $this->write_to_file( $handle, "CREATE DATABASE " . DB_NAME . ";\n" );
+        $this->write_to_file( $handle, "USE " . DB_NAME . ";\n\n" );
 
         foreach ( $tables as $t ) {
             $table = $t[0];
 
             //Header comment
-            $out .= "--\n-- Table structure for table `$table`\n--\n\n";
+            $this->write_to_file( $handle, "--\n-- Table structure for table `$table`\n--\n\n" );
 
             //Print the create table statement
             $table_create = $wpdb->get_row( "SHOW CREATE TABLE $table", ARRAY_N );
             if ( $table_create === false ) {
-                throw new Exception( $db_error . ' (DB_02)' );
+                throw new Exception( $db_error . ' (ERROR_5)' );
             }
-            $out .= $table_create[1] . ";\n\n";
+            $this->write_to_file( $handle, $table_create[1] . ";\n\n" );
 
             //Print the insert data statements
             $table_data = $wpdb->get_results( "SELECT * FROM $table", ARRAY_A );
             if ( $table_data === false ) {
-                throw new Exception( $db_error . ' (DB_03)' );
+                throw new Exception( $db_error . ' (ERROR_6)' );
             }
 
             //Data comment
-            $out .= "--\n-- Dumping data for table `$table`\n--\n\n";
+            $this->write_to_file( $handle, "--\n-- Dumping data for table `$table`\n--\n\n" );
 
             $fields = '`' . implode( '`, `', array_keys( $table_data[0] ) ) . '`';
-            $out .= "INSERT INTO `$table` ($fields) VALUES \n";
+            $this->write_to_file( $handle, "INSERT INTO `$table` ($fields) VALUES \n" );
 
+			$out = '';
             foreach ( $table_data as $data ) {
                 $data_out = '(';
                 foreach ( $data as $value ) {
@@ -180,34 +222,35 @@ class WP_Backup {
                 }
                 $out .= rtrim( $data_out, ' ,' ) . "),\n";
             }
-            $out = rtrim( $out, ",\n" ) . ";\n";
+            $this->write_to_file( $handle, rtrim( $out, ",\n" ) . ";\n" );
         }
 
-        list( $dump_location, , , ) = $this->get_options();
-        $date = date( 'Y-m-d', strtotime( current_time( 'mysql' ) ) );
-        $filename = ABSPATH . $dump_location . "/db-backup-$date.sql";
-        $handle = fopen( $filename, 'w+' );
-        if ( !$handle ) {
-            throw new Exception( $file_error . ' (FS_01)' );
-        }
-        $ret = fwrite( $handle, $out );
-        if ( !$ret ) {
-            throw new Exception( $file_error . ' (FS_02)'  );
-        }
-        $ret = fclose( $handle );
-        if ( !$ret ) {
-            throw new Exception( $file_error . ' (FS_03)'  );
+        if ( !fclose( $handle ) ) {
+            throw new Exception(  __( 'error closing sql dump file.' ) . ' (ERROR_7)'  );
         }
 
         return $filename;
     }
+
+    /**
+     * Write the contents of out to the handle provided. Raise an exception if this fails
+     * @throws Exception
+     * @param  $handle
+     * @param  $out
+     * @return void
+     */
+	private function write_to_file( $handle, $out ) {
+        if ( !fwrite( $handle, $out ) ) {
+            throw new Exception( __( 'error writing to sql dump file.' ) . ' (ERROR_10)'  );
+        }
+	}
 
 	/**
 	 * Schedules a backup to start now
 	 * @return void
 	 */
 	public function backup_now() {
-		wp_schedule_single_event( time(), 'execute_periodic_drobox_backup' );
+		wp_schedule_single_event( time(), 'execute_instant_drobox_backup' );
 	}
 
     /**
@@ -275,6 +318,7 @@ class WP_Backup {
             for ( $i = 0; $i < $diff; $i++ ) {
                 array_pop( $this->history );
 				array_pop( $this->history );
+                array_pop( $this->history );
             }
             $this->purge_backups( $diff );
             update_option( 'backup-to-dropbox-history', $this->history );
@@ -337,9 +381,10 @@ class WP_Backup {
     public function set_history( $status, $msg = null ) {
         list( , , , $count ) = $this->get_options();
         //We only want to keep the history of the backups we have stored
-        if ( count( $this->history ) >= ( $count * 2 ) ) {
+        if ( count( $this->history ) >= ( $count * 3 ) ) {
             array_pop( $this->history );
 			array_pop( $this->history );
+            array_pop( $this->history );
         }
         $this->history[strtotime( current_time( 'mysql' ) )] = array( $status, $msg );
 		krsort($this->history);
@@ -350,35 +395,33 @@ class WP_Backup {
      * Execute the backup
      * @return bool
      */
-    public function execute() {
-		$db_success = $ws_success = $success = false;
+    public function execute() {//Check that the dump location directory exists
         list( $dump_location, , , ) = $this->get_options();
         $date = date( 'Y-m-d', strtotime( current_time( 'mysql' ) ) );
         $file = "wordpress-backup-$date.zip";
         $dump_dir = ABSPATH . $dump_location;
         $destination = $dump_dir . '/' . $file;
 
-        //Check that the dump location directory exists
         if ( !file_exists( $dump_dir ) ) {
             if ( !mkdir( $dump_dir ) ) {
                 throw new Exception( __( 'error while creating the local dump directory.' ) );
             }
         }
 
-        $zip = new ZipArchive();
-        if ( $zip->open( $destination, ZIPARCHIVE::CREATE ) === true ) {
-            $db_file = $this->backup_database();
-            $ws_file = $this->backup_website();
-
-            $db_success = $zip->addFromString( basename( $db_file ), file_get_contents( $db_file ) );
-            $ws_success = $zip->addFromString( basename( $ws_file ), file_get_contents( $ws_file ) );
-            $success = $zip->close();
-            if ( $db_success && $ws_success && $success ) {
-                //Delete the old files as they are now in the archive
-                unlink( $db_file );
-                unlink( $ws_file );
+        if ( file_exists( $destination ) ) {
+            if ( !unlink( $destination ) ) {
+                throw new Exception( sprintf ( __( 'error overwriting backup file %s.' ), $file ) );
             }
         }
-        return ( $db_success && $ws_success && $success ) ? $file : false;
+
+        $db_file = $this->backup_database( $destination );
+        $ws_success = $this->backup_website( $destination );
+
+        //We can remove the db file because it will be in the backup zip
+        if ( $db_file ) {
+            unlink( $db_file );
+        }
+
+        return ( $ws_success && $db_file ) ? $file : false;
     }
 }
