@@ -407,6 +407,17 @@ class WP_Backup {
             }
         }
 
+		//Create a htaccess file so the public cannot see the backus within the backup directory
+		$htaccess = $dump_dir . '/.htaccess';
+		if ( !file_exists( $htaccess ) ) {
+			$fh = fopen($htaccess, 'w');
+			$fw = fwrite($fh, 'deny from all');
+			$fc = fclose($fh);
+			if ( !$fh || !$fw || !$fc ) {
+				throw new Exception( __( 'error while creating htaccess file.' ) );
+			}
+		}
+
         if ( file_exists( $destination ) ) {
             if ( !unlink( $destination ) ) {
                 throw new Exception( sprintf ( __( 'error overwriting backup file %s.' ), $file ) );

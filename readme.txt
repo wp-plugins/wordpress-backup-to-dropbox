@@ -10,6 +10,11 @@ A plugin for WordPress that automatically creates a backup your blog and uploads
 
 == Description ==
 
+Note: There are known memory issues with this plugin and sites larger then approx 50mb. If you are using a shared hosting
+server and your website is large then, at the moment, this plugin may not work for you. [More information can be found here.](http://www.mikeyd.com.au/2011/05/08/wordpress-backup-to-dropbox-0-7-1/)
+I am in the process of adding a feature that should overcome this issue, but for the time being please be patient and
+hopefully version 0.8 will work for all.
+
 WordPress Backup to Dropbox has been created to give you piece of mind that your blog is backed up on a regular basis.
 
 Just choose a day, time and how often you wish yor backup to be performed and kick back and wait for a zipped archive
@@ -64,6 +69,9 @@ blog is accessed after the scheduled time.
 
 == Changelog ==
 
+= 0.7.2 =
+* Automatically add a htaccess file to the backups directory so your website archives are not exposed to the public
+
 = 0.7.1 =
 * Fixed issue #3: Backup starts but fails without an error message due to the zip process running out of memory
 * Removed 'double zipping' of archive. Now the SQL dump will appear in 'wp-content/backups'
@@ -84,4 +92,4 @@ blog is accessed after the scheduled time.
 
 == Upgrade Notice ==
 
-* This version fixees a critical bug in the zip process that causes large WordPress installations to fail creating a backup archive
+* This version fixes a critical security issue where you local website archives are exposed to the public. Please upgrade ASAP.
