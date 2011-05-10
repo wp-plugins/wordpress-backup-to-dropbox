@@ -100,22 +100,21 @@ class WP_Backup {
                 $files = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $source ), RecursiveIteratorIterator::SELF_FIRST );
                 foreach ( $files as $file ) {
                     $file = realpath( $file );
-
-                    //We need to check that the file size the we are trying to zip does not exceed half the available memory.
-                    //If it does then this code attempts to increase the php memory limit ini setting. If we cannot increase
-                    //the limit due to hosting constraints then there is nothing that can be done and the user will need to
-                    //either get their memory allowance increased or remove the offending file.
-                    $file_size = filesize( $file );
-                    if ( $file_size > $max_file_size ) {
-                        $new_limit = round( ( $file_size / 1048576 ) * 2.5 );
-                        if ( ini_set( 'memory_limit', $new_limit . 'M') ) {
-                            $close_limit = ( $new_limit * 1048576 ) / 3;
-                        } else {
-                            throw new Exception( __( 'Memory limit error adding a file to the zip archive. The plugin attempted to increase the memory limit automatically but failed due to server restrictions.' ) );
-                        }
-                    }
-
                     if ( !strstr( $file, $exclude ) ) {
+                        //We need to check that the file size the we are trying to zip does not exceed half the available memory.
+                        //If it does then this code attempts to increase the php memory limit ini setting. If we cannot increase
+                        //the limit due to hosting constraints then there is nothing that can be done and the user will need to
+                        //either get their memory allowance increased or remove the offending file.
+                        $file_size = filesize( $file );
+                        if ( $file_size > $max_file_size ) {
+                            $new_limit = round( ( $file_size / 1048576 ) * 2.5 );
+                            if ( ini_set( 'memory_limit', $new_limit . 'M') ) {
+                                $close_limit = ( $new_limit * 1048576 ) / 3;
+                            } else {
+                                throw new Exception( __( 'Memory limit error adding a file to the zip archive. The plugin attempted to increase the memory limit automatically but failed due to server restrictions.' ) );
+                            }
+                        }
+                        
                         //Open the zip archive and add a file
 						if ( !$zip ) {
 							$zip = new ZipArchive();
