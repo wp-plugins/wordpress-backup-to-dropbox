@@ -21,6 +21,7 @@
 include( 'Dropbox_API/autoload.php' );
 class Dropbox_Facade {
 
+    const RETRY_COUNT = 3;
     const CONSUMER_KEY = '0kopgx3zvfd0876';
     const CONSUMER_SECRET = 'grpp5f0dai90bon';
 
@@ -36,14 +37,10 @@ class Dropbox_Facade {
     private $tokens = null;
 
     /**
-     * Create a new instance of the Dropbox facade by connecting to Dropbox with the application tokens and then creates
-     * a new instance of the dropbox api for use by ths facade
-	 *
-	 * Set the $delete_pending_authorization parameter to true if the user has accepted their authorization tokens. It
-	 * will remove the pending authorization flag from the database. If there is an issue getting the access tokens
-	 * from Dropbox then the flag will be reinstated and the user will need to authorize again.
-	 *
-	 * @param boolean $delete_pending_authorization
+     * Creates a new instance of the Dropbox facade by connecting to Dropbox with the application tokens and then create
+     * a new instance of the Dropbox api for use by ths facade.
+     *
+     * @param boolean $delete_pending_authorization
      * @return void
      */
     function __construct() {
@@ -55,18 +52,18 @@ class Dropbox_Facade {
             //Get the users drop box credentials
             $oauth = new Dropbox_OAuth_PEAR( self::CONSUMER_KEY, self::CONSUMER_SECRET );
 
-			//If we have not an access token then we need to grab one
-            if ( $this->tokens['access'] == false ) {
+            //If we have not got an access token then we need to grab one
+            if ( $this->tokens[ 'access' ] == false ) {
                 try {
-                    $oauth->setToken( $this->tokens['request'] );
-                	$this->tokens['access'] = $oauth->getAccessToken();
-                	$this->save_tokens();
-				} catch ( Exception $e ) {
-					//Authorization failed so we are still pending
-					$this->tokens['access'] = false;
-				}
+                    $oauth->setToken( $this->tokens[ 'request' ] );
+                    $this->tokens[ 'access' ] = $oauth->getAccessToken();
+                    $this->save_tokens();
+                } catch ( Exception $e ) {
+                    //Authorization failed so we are still pending
+                    $this->tokens[ 'access' ] = false;
+                }
             } else {
-                $oauth->setToken( $this->tokens['access'] );
+                $oauth->setToken( $this->tokens[ 'access' ] );
             }
             $this->dropbox = new Dropbox_API( $oauth );
         }
@@ -77,7 +74,7 @@ class Dropbox_Facade {
      * @return bool
      */
     public function is_authorized() {
-        return $this->tokens['access'] && $this->get_account_info();
+        return $this->tokens[ 'access' ] && $this->get_account_info();
     }
 
     /**
@@ -86,7 +83,7 @@ class Dropbox_Facade {
      */
     public function get_authorize_url() {
         $oauth = new Dropbox_OAuth_PEAR( self::CONSUMER_KEY, self::CONSUMER_SECRET );
-        $this->tokens['request'] = $oauth->getRequestToken();
+        $this->tokens[ 'request' ] = $oauth->getRequestToken();
         $this->save_tokens();
         return $oauth->getAuthorizeUrl();
     }
@@ -104,50 +101,59 @@ class Dropbox_Facade {
     }
 
     /**
-     * Uploads the backup to Dropbox
+     * Uploads a file to Dropbox
      * @param  $path - The upload path
      * @param  $file - The location of the file on this server
      * @return bool
      */
-    function upload_backup( $path, $file ) {
+    function upload_file( $path, $file ) {
         if ( !file_exists( $file ) ) {
             throw new Exception( __( 'backup file does not exist.' ) );
         }
-        $ret = $this->dropbox->putFile( $path, $file );
-        if ( $ret['httpStatus'] != 200 ) {
-            throw new Exception(sprintf(__( 'error while uploading the backup to Dropbox. HTTP Status: %s, Body: %s'),
-									$ret['httpStatus'],
-									$ret['body']));
+        $retries = 0;
+        $ret = false;
+        $e = null;
+        while ( $retries < self::RETRY_COUNT ) {
+            try {
+                $ret = $this->dropbox->putFile( $path, $file );
+                break;
+            } catch ( Exception $e ) {
+                $retries++;
+                sleep( 1 );
+            }
         }
+        if ( $ret == null ) {
+            throw $e;
+        } else if ( $ret[ 'httpStatus' ] != 200 ) {
+            throw new Exception( sprintf( __( 'Error while uploading %s to Dropbox. HTTP Status: %s, Body: %s' ),
+                                          $file,
+                                          $ret[ 'httpStatus' ],
+                                          $ret[ 'body' ] ) );
+        }
+        return true;
     }
 
     /**
-     * Deletes any backup files greater then the max value passed
-     * @param  $path string - The path of the backup files
-     * @param  $max int - The maximum amount of backups to keep
-     * @return void
+     * Grabs the contents of a directory from Dropbox. The contents are cached to limit the amount of requests in one
+     * execution.
+     *
+     * @param  $path - The location of the file on this server
+     * @return array
      */
-    public function purge_backups( $path, $max ) {
-        $meta_data = $this->dropbox->getMetaData( $path );
-        $contents = $meta_data['contents'];
-        if ( $max ) {
-            //Grab the backups that are currently on the server and make sure they are the correct file name
-            $backups = array();
-            foreach ( $contents as $file_meta_data ) {
-                if ( !$file_meta_data['is_dir'] && preg_match( '/wordpress-backup-\d{4}-\d{2}-\d{2}.zip/', $file_meta_data['path'] ) ) {
-                    $backups[] = $file_meta_data['path'];
+    function get_directory_contents( $path ) {
+        static $directory_cache = array();
+        if ( !array_key_exists( $path, $directory_cache ) ) {
+            $directory_cache[ $path ] = array();
+            try {
+                $meta_data = $this->dropbox->getMetaData( $path );
+                foreach ( $meta_data[ 'contents' ] as $val ) {
+                    if ( !$val[ 'is_dir' ] ) {
+                        $directory_cache[ $path ][ ] = basename( $val[ 'path' ] );
+                    }
                 }
-            }
+                //No need to do anything with the exception because the dir does not exist
+            } catch ( Dropbox_Exception_NotFound $e ) {}
         }
-
-        //Sort the backups and remove any old backups greater then the max
-        asort( $backups );
-        $count = count( $backups );
-        if ( $count > $max ) {
-            $diff = $count - $max;
-            for ( $i = 0; $i < $diff; $i++ ) {
-                $this->dropbox->delete( $backups[$i] );
-            }
-        }
+        return $directory_cache[ $path ];
     }
 }

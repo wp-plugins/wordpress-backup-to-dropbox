@@ -19,36 +19,60 @@
  *          Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110, USA.
  */
 try {
-    if ( !function_exists( 'memory_get_usage' ) ) {
-	    throw new Exception(
-            sprintf( __( "THe enable memory limit configuration setting is required by this plugin. Please recompile PHP with this setting enabled. Click %s for more information." ),
-                '<a href="http://www.php.net/manual/en/ini.core.php#ini.memory-limit">' . __( 'here' ) . '</a>' ) );
-	}
-    if ( !extension_loaded( 'zip' ) ) {
-        throw new Exception(
-            sprintf( __( 'The php zip extension is required by this plugin. Please install and activate it. Click %s for more information.' ),
-                 '<a href="http://www.php.net/manual/en/zip.installation.php">' . __( 'here' ) . '</a>' ) );
-    }
-    $backup = new WP_Backup();
+    global $wpdb;
+
+    $validation_errors = null;
+    $message = null;
+
     $dropbox = new Dropbox_Facade();
+    $backup = new WP_Backup( $dropbox, $wpdb );
+    $disable_backup_now = $backup->in_progress();
 
     //We have a form submit so update the schedule and options
     if ( array_key_exists( 'save_changes', $_POST ) ) {
         check_admin_referer( 'backup_to_dropbox_options_save' );
-        $backup->set_schedule( $_POST['day'], $_POST['time'], $_POST['frequency'] );
-        $backup->set_options( $_POST['dump_location'], $_POST['dropbox_location'], $_POST['keep_local'], $_POST['backup_count'] );
+        $backup->set_schedule( $_POST[ 'day' ], $_POST[ 'time' ], $_POST[ 'frequency' ] );
+        $validation_errors = $backup->set_options( $_POST[ 'dump_location' ], $_POST[ 'dropbox_location' ], $_POST[ 'keep_local' ], $_POST[ 'backup_count' ] );
+        $message = __( 'Settings Saved.' );
     } else if ( array_key_exists( 'backup_now', $_POST ) ) {
-		check_admin_referer( 'backup_to_dropbox_options_save' );
+        check_admin_referer( 'backup_to_dropbox_options_save' );
         $backup->backup_now();
-	}
+        $disable_backup_now = true;
+        $message = __( 'Backup scheduled to begin now.' );
+    }
 
     //Lets grab the schedule and the options to display to the user
     list( $unixtime, $frequency ) = $backup->get_schedule();
-    list( $dump_location, $dropbox_location, $keep_local, $backup_count ) = $backup->get_options();
+    if ( !$frequency ) {
+        $frequency = 'weekly';
+    }
+    list( $dump_location, $dropbox_location ) = $backup->get_options();
+
+    if ( !empty( $validation_errors ) ) {
+        $dump_location = array_key_exists( 'dump_location', $validation_errors )
+                ? $validation_errors[ 'dump_location' ][ 'original' ] : $dump_location;
+        $dropbox_location = array_key_exists( 'dropbox_location', $validation_errors )
+                ? $validation_errors[ 'dropbox_location' ][ 'original' ] : $dropbox_location;
+    }
+
     $time = date( 'H:i', $unixtime );
     $day = date( 'D', $unixtime );
     ?>
 <script type="text/javascript" language="javascript">
+    jQuery( document ).ready( function ( $ ) {
+        $( '#frequency' ).change( function() {
+            var len = $( '#day option' ).size();
+            if ( $( '#frequency' ).val() == 'daily' ) {
+                $( '#day' ).append( $( "<option></option>" ).attr( "value", "" ).text( '<?php _e( 'Daily' ); ?>' ) );
+                $( '#day option:last' ).attr( 'selected', 'selected' );
+                $( '#day' ).attr( 'disabled', 'disabled' );
+            } else if ( len == 8 ) {
+                $( '#day' ).removeAttr( 'disabled' );
+                $( '#day option:last' ).remove();
+            }
+        } );
+    } );
+
     function dropbox_authorize( url ) {
         window.open( url );
         document.getElementById( 'continue' ).style.visibility = 'visible';
@@ -56,25 +80,42 @@ try {
     }
 </script>
 <style type="text/css">
-    .backup_fail {
+    .backup_error {
         margin-left: 10px;
         color: red;
     }
 
-    .backup_success {
+    .backup_ok {
         margin-left: 10px;
+        color: green;
+    }
+
+    .backup_warning {
+        margin-left: 10px;
+        color: orange;
+    }
+
+    .history_box {
+        max-height: 140px;
+        overflow-y: scroll;
+    }
+
+    .message_box {
+        font-weight: bold;
         color: green;
     }
 </style>
     <div class="wrap">
-    <div class="icon32"><img width="36px" height="36px" src="<?php echo rtrim(dirname(dirname($_SERVER["REQUEST_URI"])), '/') ?>/wp-content/plugins/wordpress-backup-to-dropbox/Images/WordPressBackupToDropbox_64.png" alt="Wordpress Backup to Dropbox Logo"></div>
+    <div class="icon32"><img width="36px" height="36px"
+                             src="<?php echo rtrim( dirname( dirname( $_SERVER[ "REQUEST_URI" ] ) ), '/' ) ?>/wp-content/plugins/wordpress-backup-to-dropbox/Images/WordPressBackupToDropbox_64.png"
+                             alt="Wordpress Backup to Dropbox Logo"></div>
 <h2><?php _e( 'WordPress Backup to Dropbox' ); ?></h2>
 <p class="description"><?php printf( __( 'Version %s' ), BACKUP_TO_DROPBOX_VERSION ) ?></p>
     <?php
         if ( $dropbox->is_authorized() ) {
         $account_info = $dropbox->get_account_info();
-        $used = round( $account_info['quota_info']['normal'] / 1073741824, 1 );
-        $quota = $account_info['quota_info']['quota'] / 1073741824;
+        $used = round( $account_info[ 'quota_info' ][ 'normal' ] / 1073741824, 1 );
+        $quota = round( $account_info[ 'quota_info' ][ 'quota' ] / 1073741824, 1 );
         ?>
     <h3><?php _e( 'Dropbox Account Details' ); ?></h3>
     <form id="backup_to_dropbox_options" name="backup_to_dropbox_options"
@@ -83,15 +124,11 @@ try {
             <tbody>
             <tr>
                 <th><?php _e( 'Name' ); ?></th>
-                <td><?php echo $account_info['display_name'] ?></td>
-            </tr>
-            <tr>
-                <th><?php _e( 'User ID' ); ?></th>
-                <td><?php echo $account_info['uid'] ?></td>
+                <td><?php echo $account_info[ 'display_name' ] ?></td>
             </tr>
             <tr>
                 <th><?php _e( 'Quota' ); ?></th>
-                <td><?php echo $used . 'GB of ' . $quota . 'GB (' . ( $used / $quota ) * 100 . '%)' ?></td>
+                <td><?php echo $used . 'GB of ' . $quota . 'GB (' . round( ( $used / $quota ) * 100, 0 ) . '%)' ?></td>
             </tr>
             </tbody>
         </table>
@@ -99,41 +136,39 @@ try {
         <?php
         $schedule = $backup->get_schedule();
         if ( $schedule ) {
-        ?>
-            <p style="margin-left: 10px;"><?php printf( __( 'Next backup scheduled for %s at %s' ), date( 'Y-m-d', $schedule[0] ), date( 'H:i:s', $schedule[0] ) ) ?></p>
-        <?php } else { ?>
-            <p style="margin-left: 10px;"><?php _e( 'No backups are scheduled yet. Please select a day, time and frequency below. ' ) ?></p>
-        <?php } ?>
-        <h3><?php _e( 'History' ); ?></h3>
-
-        <p>
-            <?php
-            $backup_history = $backup->get_history();
-            if ( $backup_history ) {
-                foreach ( $backup_history as $unixtime => $val ) {
-					list($status, $msg) = $val;
-                    $backup_date = date( 'Y-m-d', $unixtime );
-                    $backup_time = date( 'h:i:s', $unixtime );
-                    switch ( $status ) {
-						case WP_Backup::BACKUP_STATUS_STARTED:
-                        	echo "<span class='backup_success'>" . sprintf( __( 'Backup started on %s at %s' ), $backup_date, $backup_time ) . "</span><br />";
-							break;
-                        case WP_Backup::BACKUP_STATUS_UPLOADING:
-							echo "<span class='backup_success'>" . sprintf( __( 'Backup upload started on %s at %s' ), $backup_date, $backup_time ) . "</span><br />";
-							break;
-						case WP_Backup::BACKUP_STATUS_SUCCESS:
-							echo "<span class='backup_success'>" . sprintf( __( 'Backup successfully completed on %s at %s' ), $backup_date, $backup_time ) . "</span><br />";
-							break;
-                    	default:
-                        	echo "<span class='backup_fail'>" . sprintf( __( 'Backup failed on %s at %s with an %s' ), $backup_date, $backup_time, $val[1] ) . "</span><br />";
-                    }
-                }
-            } else {
-                echo '<p style="margin-left: 10px;">' . __( 'No backups performed yet' ) . '</p>';
-            }
             ?>
-        </p>
-
+            <p style="margin-left: 10px;"><?php printf( __( 'Next backup scheduled for %s at %s' ), date( 'Y-m-d', $schedule[ 0 ] ), date( 'H:i:s', $schedule[ 0 ] ) ) ?></p>
+            <?php } else { ?>
+            <p style="margin-left: 10px;"><?php _e( 'No backups are scheduled yet. Please select a day, time and frequency below. ' ) ?></p>
+            <?php } ?>
+        <h3><?php _e( 'History' ); ?></h3>
+        <?php
+        $backup_history = $backup->get_history();
+        if ( $backup_history ) {
+            echo '<div class="history_box">';
+            foreach ( $backup_history as $hist ) {
+                list( $backup_time, $status, $msg ) = $hist;
+                $backup_date = date( 'Y-m-d', $backup_time );
+                $backup_time_str = date( 'h:i:s', $backup_time );
+                switch ( $status ) {
+                    case WP_Backup::BACKUP_STATUS_STARTED:
+                        echo "<span class='backup_ok'>" . sprintf( __( 'Backup started on %s at %s' ), $backup_date, $backup_time_str ) . "</span><br />";
+                        break;
+                    case WP_Backup::BACKUP_STATUS_FINISHED:
+                        echo "<span class='backup_ok'>" . sprintf( __( 'Backup completed on %s at %s' ), $backup_date, $backup_time_str ) . "</span><br />";
+                        break;
+                    case WP_Backup::BACKUP_STATUS_WARNING:
+                        echo "<span class='backup_warning'>" . sprintf( __( 'Backup warning on %s at %s: %s' ), $backup_date, $backup_time_str, $msg ) . "</span><br />";
+                        break;
+                    default:
+                        echo "<span class='backup_error'>" . sprintf( __( 'Backup error on %s at %s: %s' ), $backup_date, $backup_time_str, $msg ) . "</span><br />";
+                }
+            }
+            echo '</div>';
+        } else {
+            echo '<p style="margin-left: 10px;">' . __( 'No backups performed yet' ) . '</p>';
+        }
+        ?>
         <h3><?php _e( 'Settings' ); ?></h3>
         <table class="form-table">
             <tbody>
@@ -144,14 +179,10 @@ try {
                     <input name="dump_location" type="text" id="dump_location" value="<?php echo $dump_location; ?>"
                            class="regular-text code">
                     <span class="description"><?php _e( 'Default is' ); ?><code>wp-content/backups</code></span>
-                </td>
-            </tr>
-            <tr valign="top">
-                <th scope="row"><label for="dump_location"><?php _e( 'Keep local backup' ); ?></label></th>
-                <td>
-                    <input name="keep_local" type="checkbox"
-                           id="keep_local" <?php echo $keep_local ? 'checked="checked"' : ''; ?>>
-                    <span class="description"><?php _e( 'Keep a copy of the backup on your WordPress server.' ); ?></code></span>
+                    <?php if ( $validation_errors && array_key_exists( 'dump_location', $validation_errors ) ) { ?>
+                    <br/><span class="description"
+                               style="color: red"><?php echo $validation_errors[ 'dump_location' ][ 'message' ] ?></span>
+                    <?php } ?>
                 </td>
             </tr>
             <tr valign="top">
@@ -162,19 +193,33 @@ try {
                     <input name="dropbox_location" type="text" id="dropbox_location"
                            value="<?php echo $dropbox_location; ?>" class="regular-text code">
                     <span class="description"><?php _e( 'Default is' ); ?><code>WordPressBackup</code></span>
+                    <?php if ( $validation_errors && array_key_exists( 'dropbox_location', $validation_errors ) ) { ?>
+                    <br/><span class="description"
+                               style="color: red"><?php echo $validation_errors[ 'dropbox_location' ][ 'message' ] ?></span>
+                    <?php } ?>
                 </td>
             </tr>
             <tr valign="top">
                 <th scope="row"><label for="time"><?php _e( 'Day and Time' ); ?></label></th>
                 <td>
-                    <select id="day" name="day">
-                        <option value="Mon" <?php echo $day == 'Mon' ? ' selected="selected"' : "" ?>><?php _e( 'Monday' ); ?></option>
-                        <option value="Tue" <?php echo $day == 'Tue' ? ' selected="selected"' : "" ?>><?php _e( 'Tuesday' ); ?></option>
-                        <option value="Wed" <?php echo $day == 'Wed' ? ' selected="selected"' : "" ?>><?php _e( 'Wednesday' ); ?></option>
-                        <option value="Thu" <?php echo $day == 'Thu' ? ' selected="selected"' : "" ?>><?php _e( 'Thursday' ); ?></option>
-                        <option value="Fri" <?php echo $day == 'Fri' ? ' selected="selected"' : "" ?>><?php _e( 'Friday' ); ?></option>
-                        <option value="Sat" <?php echo $day == 'Sat' ? ' selected="selected"' : "" ?>><?php _e( 'Saturday' ); ?></option>
-                        <option value="Sun" <?php echo $day == 'Sun' ? ' selected="selected"' : "" ?>><?php _e( 'Sunday' ); ?></option>
+                    <select id="day" name="day" <?php echo ( $frequency == 'daily' ) ? 'disabled="disabled"' : '' ?>>
+                        <option value="Mon" <?php echo $day == 'Mon' ? ' selected="selected"'
+                                : "" ?>><?php _e( 'Monday' ); ?></option>
+                        <option value="Tue" <?php echo $day == 'Tue' ? ' selected="selected"'
+                                : "" ?>><?php _e( 'Tuesday' ); ?></option>
+                        <option value="Wed" <?php echo $day == 'Wed' ? ' selected="selected"'
+                                : "" ?>><?php _e( 'Wednesday' ); ?></option>
+                        <option value="Thu" <?php echo $day == 'Thu' ? ' selected="selected"'
+                                : "" ?>><?php _e( 'Thursday' ); ?></option>
+                        <option value="Fri" <?php echo $day == 'Fri' ? ' selected="selected"'
+                                : "" ?>><?php _e( 'Friday' ); ?></option>
+                        <option value="Sat" <?php echo $day == 'Sat' ? ' selected="selected"'
+                                : "" ?>><?php _e( 'Saturday' ); ?></option>
+                        <option value="Sun" <?php echo $day == 'Sun' ? ' selected="selected"'
+                                : "" ?>><?php _e( 'Sunday' ); ?></option>
+                        <?php if ( $frequency == 'daily' ) { ?>
+                        <option value="" selected="selected"><?php _e( 'Daily' ); ?></option>
+                        <?php } ?>
                     </select> at
                     <select id="time" name="time">
                         <option value="00:00" <?php echo $time == '00:00' ? ' selected="selected"' : "" ?>>00:00
@@ -233,34 +278,29 @@ try {
                 <th scope="row"><label for="frequency"><?php _e( 'Frequency' ); ?></label></th>
                 <td>
                     <select id="frequency" name="frequency">
-						<option value="daily" <?php echo $frequency == 'daily' ? ' selected="selected"' : "" ?>>
+                        <option value="daily" <?php echo $frequency == 'daily' ? ' selected="selected"' : "" ?>>
                             <?php _e( 'Daily' ) ?>
                         </option>
                         <option value="weekly" <?php echo $frequency == 'weekly' ? ' selected="selected"' : "" ?>>
                             <?php _e( 'Weekly' ) ?>
                         </option>
-                        <option value="fortnightly" <?php echo $frequency == 'fortnightly' ? ' selected="selected"' : "" ?>>
+                        <option value="fortnightly" <?php echo $frequency == 'fortnightly' ? ' selected="selected"'
+                                : "" ?>>
                             <?php _e( 'Fortnightly' ) ?>
                         </option>
                         <option value="monthly" <?php echo $frequency == 'monthly' ? ' selected="selected"' : "" ?>>
                             <?php _e( 'Every 4 weeks' ) ?>
                         </option>
-                        <option value="two_monthly" <?php echo $frequency == 'two_monthly' ? ' selected="selected"' : "" ?>>
+                        <option value="two_monthly" <?php echo $frequency == 'two_monthly' ? ' selected="selected"'
+                                : "" ?>>
                             <?php _e( 'Every 8 weeks' ) ?>
                         </option>
-                        <option value="three_monthly" <?php echo $frequency == 'three_monthly' ? ' selected="selected"' : "" ?>>
+                        <option value="three_monthly" <?php echo $frequency == 'three_monthly' ? ' selected="selected"'
+                                : "" ?>>
                             <?php _e( 'Every 12 weeks' ) ?>
                         </option>
                     </select>
                     <span class="description"><?php _e( 'How often the backup to Dropbox is to be performed.' ); ?></span>
-                </td>
-            </tr>
-            <tr valign="top">
-                <th scope="row"><label for="backup_count"><?php _e( 'Backups to keep' ); ?></label></th>
-                <td>
-                    <input name="backup_count" type="text" id="backup_count" value="<?php echo $backup_count ?>"
-                           class="small-text">
-                    <span class="description"><?php _e( 'How many backups do you want to keep locally and in your Dropbox at any one time.' ) ?></span>
                 </td>
             </tr>
             </tbody>
@@ -268,12 +308,20 @@ try {
         <p class="submit">
             <input type="submit" id="save_changes" name="save_changes" class="button-primary"
                    value="<?php _e( 'Save Changes' ); ?>">
-			<input type="submit" id="backup_now" name="backup_now" class="button-primary"
-                   value="<?php _e( 'Backup Now' ); ?>">
+            <input type="submit" id="backup_now" name="backup_now" class="button-primary" <?php echo $disable_backup_now
+                    ? 'disabled="disabled"' : '' ?> value="<?php _e( 'Backup Now' ); ?>">
+            <?php if ( $message ) { ?>
+            <span class='message_box'><?php echo $message ?></span>
+            <script type="text/javascript">
+                jQuery( document ).ready( function ( $ ) {
+                    $( '.message_box' ).fadeOut( 2000 );
+                } );
+            </script>
+            <?php } ?>
         </p>
         <?php wp_nonce_field( 'backup_to_dropbox_options_save' ); ?>
     </form>
-            <?php
+        <?php
 
     } else {
         //We need to re authenticate this user
@@ -282,14 +330,17 @@ try {
     <h3><?php _e( 'Thank you for installing WordPress Backup to Dropbox!' ); ?></h3>
     <p><?php _e( 'In order to use this plugin you will need to authorized it with your Dropbox account.' ); ?></p>
     <p><?php _e( 'Please click the authorize button below and follow the instructions inside the pop up window.' ); ?></p>
-	<?php if ( array_key_exists( 'continue', $_POST ) && !$dropbox->is_authorized() ) { ?>
-		<p style="color: red"><?php _e( 'There was an error authorizing the plugin with your Dropbox account. Please try again.' ); ?></p>
-	<?php } ?>
+        <?php if ( array_key_exists( 'continue', $_POST ) && !$dropbox->is_authorized() ) { ?>
+        <p style="color: red"><?php _e( 'There was an error authorizing the plugin with your Dropbox account. Please try again.' ); ?></p>
+            <?php } ?>
     <p>
-        <form id="backup_to_dropbox_continue" name="backup_to_dropbox_continue" action="options-general.php?page=backup-to-dropbox" method="post">
-            <input type="button" name="authorize" id="authorize" value="Authorize" onclick="dropbox_authorize( '<?php echo $url ?>' )" /><br />
-            <input style="visibility: hidden;" type="submit" name="continue" id="continue" value="<?php _e('Continue'); ?>" />
-        </form>
+    <form id="backup_to_dropbox_continue" name="backup_to_dropbox_continue"
+          action="options-general.php?page=backup-to-dropbox" method="post">
+        <input type="button" name="authorize" id="authorize" value="Authorize"
+               onclick="dropbox_authorize( '<?php echo $url ?>' )"/><br/>
+        <input style="visibility: hidden;" type="submit" name="continue" id="continue"
+               value="<?php _e( 'Continue' ); ?>"/>
+    </form>
     </p>
         <?php
 
