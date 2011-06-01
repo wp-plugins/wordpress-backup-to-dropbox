@@ -6,25 +6,22 @@ Requires at least: 3.0
 Tested up to: 3.1.2
 Stable tag: trunk
 
-A plugin for WordPress that automatically creates a backup your blog and uploads it to Dropbox.
+A plugin for WordPress that automatically uploads your blogs files and a SQL dump of its database to Dropbox. Giving you
+piece of mind that your entire blog including its precious posts, images and metadata regularly backed up.
 
 == Description ==
 
-Note: There are known memory issues with this plugin and sites larger then approx 50mb. If you are using a shared hosting
-server and your website is large then, at the moment, this plugin may not work for you. [More information can be found here.](http://www.mikeyd.com.au/2011/05/08/wordpress-backup-to-dropbox-0-7-1/)
-I am in the process of adding a feature that should overcome this issue, but for the time being please be patient and
-hopefully version 0.8 will work for all.
-
 WordPress Backup to Dropbox has been created to give you piece of mind that your blog is backed up on a regular basis.
 
-Just choose a day, time and how often you wish yor backup to be performed and kick back and wait for a zipped archive
-of your websites files and its database to be dropped in your Dropbox!
+Just choose a day, time and how often you wish yor backup to be performed and kick back and wait for your websites files
+and a SQL dump of its database to be dropped in your Dropbox!
 
-Other settings include the ability to set where you want your backups stored within Dropbox and on your server, whether
-you want to keep a copy of the backup on your server, and how many backups you wish to hold onto at any one time.
+You can set where you want your backup stored within Dropbox and on your server
 
 The plugin uses [OAuth](http://en.wikipedia.org/wiki/OAuth) so your Dropbox account details are not stored for the
 plugin to gain access.
+
+= Setup =
 
 Once installed, the authorization process is pretty easy -
 
@@ -34,9 +31,24 @@ Once installed, the authorization process is pretty easy -
 
 3. Once you have granted access to the plugin click continue to setup your backup
 
-Minimum Requirements -
+= Errors and Warnings =
 
-1. PHP 5.2 or higher with zip support
+During the backup process the plugin may experience problems that will be raised as an error or a warning depending on
+its severity.
+
+A warning will be raised if your PHP installation is running in safe mode, if you get this warning please read my blog
+post on dealing with this.
+
+If the backup encounters a file that is larger then what can be safely handheld within the memory limit of your PHP
+installation, or the file fails to upload to Dropbox it will be skipped and a warning will be raised.
+
+The plugin attempts to recover from an error that may occur during a backup where backup process goes away for an unknown
+reason. In this case the backup will be restarted from where it left off. Unfortunately, at this time, it cannot recover
+from other errors, however a message should be displayed informing you of the reason for failure.
+
+= Minimum Requirements =
+
+1. PHP 5.2 or higher
 
 2. [A Dropbox account](https://www.dropbox.com/referrals/NTM1NTcwNjc5)
 
@@ -48,8 +60,8 @@ If you notice any bugs or want to request a feature please do so on BitBucket - 
 
 == Installation ==
 
-1. Upload the contents of `wordpress-dropbox-backup.zip` to the `/wp-content/plugins/` directory or use WordPress' built-in plugin upload tool
-2. Activate the plugin through the 'Plugins' menu in WordPress
+1. Upload the contents of `wordpress-dropbox-backup.zip` to the `/wp-content/plugins/` directory or use WordPress' built-in plugin install tool
+2. Activate the plugin through the 'Plugins' menu within WordPress
 3. Authorize the plugin with Dropbox by following the instructions in the settings page found under Settings->Backup to Dropbox
 
 == Frequently Asked Questions ==
@@ -58,16 +70,33 @@ If you notice any bugs or want to request a feature please do so on BitBucket - 
 
 Browse to http://db.tt/szCyl7o and create a free account.
 
-= Why doesn't my backup execute at the time I set? =
+= Why doesn't my backup execute at the exact time I set? =
 
 The backup is executed using WordPress' scheduling system that, unlike a cron job, kicks of tasks the next time your
 blog is accessed after the scheduled time.
+
+= Where is my database SQL dump located? =
+The database us backed up into a file named '[database name]-backup.sql'. It will be found within the local backup location
+you have set. Using the default settings the file will be found at the path 'WordPressBackups/wp-content/backups' within
+your Dropbox.
+
+= Can I perform a backup if my PHP installation has safe mode enabled? =
+Yes you can, however you need to modify the max execution time in your php.ini manually.
+[Please read this blog post for more information.](http://www.mikeyd.com.au/2011/05/24/setting-the-maximum-execution-time-when-php-is-running-in-safe-mode/)
 
 == Screenshots ==
 
 1. The WordPress Backup to Dropbox options page
 
 == Changelog ==
+
+= 0.8 =
+* A major change to improve performance. The wordpress files are no longer zipped, instead they are individually uploaded
+if they have been modified since the last backup.
+* Added validation of the path fields to fix issue #11
+* Changed the path include order to fix issue #14
+* Disabled the day select list if the daily frequency is selected to fix issue #8
+* For more information please visit http://www.mikeyd.com.au/2011/05/26/wordpress-backup-to-dropbox-0-8/
 
 = 0.7.2 =
 * Automatically add a htaccess file to the backups directory so your website archives are not exposed to the public
@@ -92,4 +121,6 @@ blog is accessed after the scheduled time.
 
 == Upgrade Notice ==
 
-* This version fixes a critical security issue where you local website archives are exposed to the public. Please upgrade ASAP.
+* A major change to improve performance. The WordPress files are no longer zipped, instead they are individually uploaded
+if they have been modified since the last backup. It is highly recommended that you upgrade because zipping will no longer
+be supported.
