@@ -112,13 +112,7 @@ class WP_Backup {
      * @return string - Path to the database dump
      */
     public function backup_website( $max_execution_time ) {
-        list( $dump_location, $dropbox_location, , ) = $this->get_options();
-
-        //Backwards compatibility to exclude zips from pre 0.8 releases
-        $exclude = ABSPATH . $dump_location . '/wordpress-backup';
-        if ( PHP_OS == 'WINNT' ) {
-            $exclude = str_replace( '/', '\\', $exclude );
-        }
+        list( , $dropbox_location, , ) = $this->get_options();
 
         //Grab the memory limit setting in the php ini to ensure we do not exceed it
         $memory_limit_string = ini_get( 'memory_limit' );
@@ -139,36 +133,39 @@ class WP_Backup {
                 }
 
                 $file = realpath( $file );
-                if ( !strstr( $file, $exclude ) ) {
-                    //To ensure we don't exceed our memory requirements skip files that exceed our max
-                    if ( filesize( $file ) > $max_file_size ) {
-                        $this->log( self::BACKUP_STATUS_WARNING,
-                                    sprintf( __( "file '%s' exceeds 40 percent of your PHP memory limit. The limit must be increased to back up this file." ), basename( $file ) ) );
-                        continue;
-                    }
+				if ( is_file( $file ) ) {
+					//To ensure we don't exceed our memory requirements skip files that exceed our max
+					if ( filesize( $file ) > $max_file_size ) {
+						$this->log( self::BACKUP_STATUS_WARNING,
+									sprintf( __( "file '%s' exceeds 40 percent of your PHP memory limit. The limit must be increased to back up this file." ), basename( $file ) ) );
+						continue;
+					}
 
-                    if ( is_file( $file ) ) {
-                        $dir_name = dirname( $dropbox_location . '/' . str_replace( $source . '/', '', $file ) );
-                        $trimmed_file = basename( $file );
+					//Is the file on the exclude list?
+					$trimmed_file = basename( $file );
+					if ( in_array( $trimmed_file, self::$ignored_files ) ) {
+						continue;
+					}
 
-                        //Is the file on the exclude list?
-                        if ( array_search( $trimmed_file, self::$ignored_files ) !== false ) {
-                            continue;
-                        }
-
-                        //If the file does no exist in Dropbox or it has changed on the server then upload it
-                        $directory_contents = $this->dropbox->get_directory_contents( $dir_name );
-                        if ( !in_array( $trimmed_file, $directory_contents ) || filectime( $file ) > $last_backup_time ) {
-                            try {
-                                $this->dropbox->upload_file( $dropbox_location . '/' . str_replace( $source . '/', '', $file ), $file );
-                            } catch ( Exception $e ) {
-                                $msg = sprintf( __( "Could not upload '%s' due to the following error: %s" ), $file, $e->getMessage() );
-                                $this->log( self::BACKUP_STATUS_WARNING, $msg );
-                            }
-                        }
-                    }
-                    update_option( 'backup-to-dropbox-last-action', time() );
-                }
+					//Get the path to where the file will reside in Dropbox
+					$dropbox_path = $dropbox_location . DIRECTORY_SEPARATOR . str_replace( $source . DIRECTORY_SEPARATOR, '', $file );
+					if ( PHP_OS == 'WINNT' ) {
+						//The dropbox api requires a forward slash as the directory separator
+            			$dropbox_path = str_replace( DIRECTORY_SEPARATOR, '/', $dropbox_path );
+        			}
+					
+					//If the file does no exist in Dropbox or it has changed on the server then upload it
+					$directory_contents = $this->dropbox->get_directory_contents( dirname( $dropbox_path ) );
+					if ( !in_array( $trimmed_file, $directory_contents ) || filectime( $file ) > $last_backup_time ) {
+						try {
+							$this->dropbox->upload_file( $dropbox_path, $file );
+						} catch ( Exception $e ) {
+							$msg = sprintf( __( "Could not upload '%s' due to the following error: %s" ), $file, $e->getMessage() );
+							$this->log( self::BACKUP_STATUS_WARNING, $msg );
+						}
+					}
+				}
+				update_option( 'backup-to-dropbox-last-action', time() );
             }
             return true;
         }
@@ -189,7 +186,7 @@ class WP_Backup {
 
         list( $dump_location, , , ) = $this->get_options();
 
-        $filename = ABSPATH . $dump_location . '/' . DB_NAME . '-backup.sql';
+        $filename = ABSPATH . $dump_location . DIRECTORY_SEPARATOR . DB_NAME . '-backup.sql';
         $handle = fopen( $filename, 'w+' );
         if ( !$handle ) {
             throw new Exception( __( 'Error creating sql dump file.' ) . ' (ERROR_2)' );
