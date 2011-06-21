@@ -58,6 +58,10 @@ You can pull the source from my BitBucket account - https://bitbucket.org/michae
 
 If you notice any bugs or want to request a feature please do so on BitBucket - https://bitbucket.org/michaeldewildt/wordpress-backup-to-dropbox/issues/
 
+= Translators =
+
+* Brazilian Portuguese (pt_BR) - [Marcelo Volgarini](http://www.techload.com.br)
+
 == Installation ==
 
 1. Upload the contents of `wordpress-dropbox-backup.zip` to the `/wp-content/plugins/` directory or use WordPress' built-in plugin install tool

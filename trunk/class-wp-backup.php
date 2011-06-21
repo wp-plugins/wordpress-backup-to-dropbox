@@ -65,14 +65,12 @@ class WP_Backup {
 
     /**
      * Construct the Backup class and pre load the schedule, history and options
-     * @param $dropbox
+     * @param Dropbox_Facade $dropbox
      * @param $wpdb
      * @return \WP_Backup
      */
     public function __construct( $dropbox, $wpdb ) {
-        //Check that Dropbox is authorized
         $this->dropbox = $dropbox;
-
         $this->database = $wpdb;
 
         //Load the history
@@ -128,7 +126,7 @@ class WP_Backup {
             foreach ( $files as $file ) {
 
                 if ( $max_execution_time && time() > $backup_stop_time ) {
-                    $this->log( self::BACKUP_STATUS_FAILED, __( 'Backup did not complete because the maximum script execution time was reached.' ) );
+                    $this->log( self::BACKUP_STATUS_FAILED, __( 'Backup did not complete because the maximum script execution time was reached.', 'wpbtd' ) );
                     return false;
                 }
 
@@ -137,7 +135,7 @@ class WP_Backup {
 					//To ensure we don't exceed our memory requirements skip files that exceed our max
 					if ( filesize( $file ) > $max_file_size ) {
 						$this->log( self::BACKUP_STATUS_WARNING,
-									sprintf( __( "file '%s' exceeds 40 percent of your PHP memory limit. The limit must be increased to back up this file." ), basename( $file ) ) );
+									sprintf( __( "file '%s' exceeds 40 percent of your PHP memory limit. The limit must be increased to back up this file.", 'wpbtd' ), basename( $file ) ) );
 						continue;
 					}
 
@@ -160,7 +158,11 @@ class WP_Backup {
 						try {
 							$this->dropbox->upload_file( $dropbox_path, $file );
 						} catch ( Exception $e ) {
-							$msg = sprintf( __( "Could not upload '%s' due to the following error: %s" ), $file, $e->getMessage() );
+							if ( $e->getMessage() == 'Unauthorized' ) {
+								$this->log( self::BACKUP_STATUS_FAILED, __( 'The plugin is no longer authorized with Dropbox.', 'wpbtd' ) );
+								return false;
+							}
+							$msg = sprintf( __( "Could not upload '%s' due to the following error: %s", 'wpbtd' ), $file, $e->getMessage() );
 							$this->log( self::BACKUP_STATUS_WARNING, $msg );
 						}
 					}
@@ -177,7 +179,7 @@ class WP_Backup {
      * @return string
      */
     public function backup_database() {
-        $db_error = __( 'Error while accessing database.' );
+        $db_error = __( 'Error while accessing database.', 'wpbtd' );
 
         $tables = $this->database->get_results( 'SHOW TABLES', ARRAY_N );
         if ( $tables === false ) {
@@ -189,7 +191,7 @@ class WP_Backup {
         $filename = ABSPATH . $dump_location . DIRECTORY_SEPARATOR . DB_NAME . '-backup.sql';
         $handle = fopen( $filename, 'w+' );
         if ( !$handle ) {
-            throw new Exception( __( 'Error creating sql dump file.' ) . ' (ERROR_2)' );
+            throw new Exception( __( 'Error creating sql dump file.', 'wpbtd' ) . ' (ERROR_2)' );
         }
 
         $blog_time = strtotime( current_time( 'mysql' ) );
@@ -272,7 +274,7 @@ class WP_Backup {
      */
     private function write_to_file( $handle, $out ) {
         if ( !fwrite( $handle, $out ) ) {
-            throw new Exception( __( 'Error writing to sql dump file.' ) . ' (ERROR_6)' );
+            throw new Exception( __( 'Error writing to sql dump file.', 'wpbtd' ) . ' (ERROR_6)' );
         }
     }
 
@@ -343,7 +345,7 @@ class WP_Backup {
     public function set_options( $dump_location, $dropbox_location ) {
         static $regex = '/[^A-Za-z0-9-_\/]/';
         $errors = array();
-        $error_msg = __( 'Invalid directory path. Path must only contain alphanumeric characters and the forward slash (\'/\') to separate directories.' );
+        $error_msg = __( 'Invalid directory path. Path must only contain alphanumeric characters and the forward slash (\'/\') to separate directories.', 'wpbtd' );
 
         preg_match( $regex, $dump_location, $matches );
         if ( !empty( $matches ) ) {
@@ -422,7 +424,7 @@ class WP_Backup {
             $this->log( WP_Backup::BACKUP_STATUS_STARTED );
 
             if ( !$this->dropbox->is_authorized() ) {
-                $this->log( WP_Backup::BACKUP_STATUS_FAILED, __( "Your Dropbox account is not authorized yet." ) );
+                $this->log( WP_Backup::BACKUP_STATUS_FAILED, __( "Your Dropbox account is not authorized yet.", 'wpbtd' ) );
                 return false;
             }
 
@@ -431,7 +433,7 @@ class WP_Backup {
 
             if ( !file_exists( $dump_dir ) ) {
                 if ( !mkdir( $dump_dir ) ) {
-                    throw new Exception( __( 'Error while creating the local dump directory.' ) );
+                    throw new Exception( __( 'Error while creating the local dump directory.', 'wpbtd' ) );
                 }
             }
 
@@ -462,7 +464,7 @@ class WP_Backup {
             $fw = fwrite( $fh, 'deny from all' );
             $fc = fclose( $fh );
             if ( !$fh || !$fw || !$fc ) {
-                throw new Exception( __( 'error while creating htaccess file.' ) );
+                throw new Exception( __( 'error while creating htaccess file.', 'wpbtd' ) );
             }
         }
     }
@@ -476,9 +478,9 @@ class WP_Backup {
         if ( ini_get( 'safe_mode' ) ) {
             if ( ini_get( 'max_execution_time' ) != 0 ) {
                 $this->log( self::BACKUP_STATUS_WARNING,
-                            __( 'This php installation is running in safe mode so the time limit cannot be set.' ) . ' ' .
-                            sprintf( __( 'Click %s for more information.' ),
-                                     '<a href="http://www.mikeyd.com.au/2011/05/24/setting-the-maximum-execution-time-when-php-is-running-in-safe-mode/">' . __( 'here' ) . '</a>' ) );
+                            __( 'This php installation is running in safe mode so the time limit cannot be set.', 'wpbtd' ) . ' ' .
+                            sprintf( __( 'Click %s for more information.', 'wpbtd' ),
+                                     '<a href="http://www.mikeyd.com.au/2011/05/24/setting-the-maximum-execution-time-when-php-is-running-in-safe-mode/">' . __( 'here', 'wpbtd' ) . '</a>' ) );
                 return ini_get( 'max_execution_time' ) - 5; //Lets leave 5 seconds of padding
             }
         } else {

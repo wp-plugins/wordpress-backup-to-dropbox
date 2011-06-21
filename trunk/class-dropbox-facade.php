@@ -74,7 +74,17 @@ class Dropbox_Facade {
      * @return bool
      */
     public function is_authorized() {
-        return $this->tokens[ 'access' ] && $this->get_account_info();
+		if ( !$this->tokens['access'] ) {
+			return false;
+		}
+		$info = $this->get_account_info();
+		if ( array_key_exists( 'error', $info ) ) {
+			$this->tokens = null;
+			$this->save_tokens();
+			return false;
+		} else {
+			return true;
+		}
     }
 
     /**
@@ -90,7 +100,7 @@ class Dropbox_Facade {
 
     /**
      * Return the users Dropbox info
-     * @return void
+     * @return array
      */
     public function get_account_info() {
         return $this->dropbox->getAccountInfo();
@@ -108,7 +118,7 @@ class Dropbox_Facade {
      */
     function upload_file( $path, $file ) {
         if ( !file_exists( $file ) ) {
-            throw new Exception( __( 'backup file does not exist.' ) );
+            throw new Exception( __( 'backup file does not exist.', 'wpbtd' ) );
         }
         $retries = 0;
         $ret = false;
@@ -122,10 +132,12 @@ class Dropbox_Facade {
                 sleep( 1 );
             }
         }
-        if ( $ret == null ) {
+        if ( !$ret ) {
             throw $e;
+		} else if ( $ret[ 'httpStatus' ] == 401 ) {
+			throw new Exception( 'Unauthorized' );
         } else if ( $ret[ 'httpStatus' ] != 200 ) {
-            throw new Exception( sprintf( __( 'Error while uploading %s to Dropbox. HTTP Status: %s, Body: %s' ),
+            throw new Exception( sprintf( __( 'Error while uploading %s to Dropbox. HTTP Status: %s, Body: %s', 'wpbtd' ),
                                           $file,
                                           $ret[ 'httpStatus' ],
                                           $ret[ 'body' ] ) );
