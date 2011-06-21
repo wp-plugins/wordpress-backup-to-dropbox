@@ -118,3 +118,6 @@ add_action( 'monitor_dropbox_backup_hook', 'monitor_dropbox_backup' );
 add_action( 'execute_periodic_drobox_backup', 'execute_drobox_backup' );
 add_action( 'execute_instant_drobox_backup', 'execute_drobox_backup' );
 add_action( 'admin_menu', 'backup_to_dropbox_admin_menu' );
+
+//i18n language text domain
+load_plugin_textdomain( 'wpbtd', true, 'wordpress-backup-to-dropbox/Languages/' );
