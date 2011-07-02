@@ -60,7 +60,8 @@ If you notice any bugs or want to request a feature please do so on BitBucket - 
 
 = Translators =
 
-* Brazilian Portuguese (pt_BR) - [Marcelo Volgarini](http://www.techload.com.br)
+* Arabic (ar) - [Saif Maki](www.saif.cz.cc)
+* Brazilian Portuguese (pt_BR) - [Techload Informatica](http://www.techload.com.br)
 
 == Installation ==
 
