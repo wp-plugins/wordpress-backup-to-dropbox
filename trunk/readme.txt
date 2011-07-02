@@ -62,6 +62,7 @@ If you notice any bugs or want to request a feature please do so on BitBucket - 
 
 * Arabic (ar) - [Saif Maki](www.saif.cz.cc)
 * Brazilian Portuguese (pt_BR) - [Techload Informatica](http://www.techload.com.br)
+* Galician (gl_ES) - WordPress Galego Translation Team
 
 == Installation ==
 
