@@ -61,7 +61,7 @@ class WP_Backup {
      * These files cannot be uploaded to Dropbox
      * @var array
      */
-    private static $ignored_files = array( '.DS_Store' );
+    private static $ignored_files = array( '.DS_Store', 'Thumbs.db' );
 
     /**
      * Construct the Backup class and pre load the schedule, history and options
