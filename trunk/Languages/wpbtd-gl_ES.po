@@ -8,7 +8,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2011-07-02 02:21+0100\n"
+"PO-Revision-Date: 2011-07-03 23:02+0100\n"
 "Last-Translator: Pablo César Galdo Regueiro <pcgaldo@gmail.com>\n"
 "Language-Team: WordPress Galego <http://gl.wordpress.org>\n"
 "X-Poedit-KeywordsList: __;_e\n"
@@ -31,7 +31,7 @@ msgstr "A copia de seguranza non se completou porque o tempo máximo de execuci�
 
 #: class-wp-backup.php:146
 msgid "file '%s' exceeds 40 percent of your PHP memory limit. The limit must be increased to back up this file."
-msgstr "o ficheiro '%s' excede o 40 por cento da memoria limite do PHP. O limite debe ser incrementado para facer a copia de seguranza deste ficheiro."
+msgstr "o ficheiro '%s' excede o 40 por cento da memoria límite do PHP. O límite debe ser incrementado para facer a copia de seguranza deste ficheiro."
 
 #: class-wp-backup.php:165
 msgid "Could not upload '%s' due to the following error: %s"
@@ -71,7 +71,7 @@ msgstr "erro ao crear o ficheiro htaccess."
 
 #: class-wp-backup.php:482
 msgid "This php installation is running in safe mode so the time limit cannot be set."
-msgstr "Esta instalación do PHP está executándose en modo de seguranza e o tempo limite non pode ser axustado."
+msgstr "Esta instalación do PHP está executándose en modo de seguranza e o tempo límite non pode ser axustado."
 
 #: class-wp-backup.php:483
 msgid "Click %s for more information."
