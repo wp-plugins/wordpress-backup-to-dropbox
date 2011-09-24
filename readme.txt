@@ -86,7 +86,7 @@ The backup is executed using WordPress' scheduling system that, unlike a cron jo
 blog is accessed after the scheduled time.
 
 = Where is my database SQL dump located? =
-The database us backed up into a file named '[database name]-backup.sql'. It will be found within the local backup location
+The database is backed up into a file named '[database name]-backup.sql'. It will be found within the local backup location
 you have set. Using the default settings the file will be found at the path 'WordPressBackups/wp-content/backups' within
 your Dropbox.
 
