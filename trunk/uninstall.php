@@ -26,7 +26,7 @@ delete_option( 'backup-to-dropbox-tokens' );
 delete_option( 'backup-to-dropbox-options' );
 delete_option( 'backup-to-dropbox-history' );
 delete_option( 'backup-to-dropbox-last-action' );
-
+delete_option( 'backup-to-dropbox-file-list' );
 
 wp_clear_scheduled_hook( 'execute_periodic_drobox_backup' );
 
