@@ -3,7 +3,7 @@
 Plugin Name: WordPress Backup to Dropbox
 Plugin URI: http://www.mikeyd.com.au/wordpress-backup-to-dropbox/
 Description: A plugin for WordPress that automatically uploads your blogs files and a SQL dump of its database to Dropbox. Giving you piece of mind that your your entire blog including its precious posts, images and metadata regularly backed up.
-Version: 0.8
+Version: 0.9
 Author: Michael De Wildt
 Author URI: http://www.mikeyd.com.au
 License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
@@ -21,13 +21,13 @@ License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
         along with this program; if not, write to the Free Software
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-include( 'class-dropbox-facade.php' );
-include( 'class-wp-backup.php' );
+include_once( 'class-dropbox-facade.php' );
+include_once( 'class-wp-backup.php' );
 
-define( 'BACKUP_TO_DROPBOX_VERSION', '0.8' );
+define( 'BACKUP_TO_DROPBOX_VERSION', '0.9' );
 
 //We need to set the PEAR_Includes folder in the path
-ini_set( 'include_path', dirname( __FILE__ ) . '/PEAR_Includes' . PATH_SEPARATOR . DEFAULT_INCLUDE_PATH );
+set_include_path( get_include_path() . PATH_SEPARATOR . dirname( __FILE__ ) . '/PEAR_Includes' );
 
 /**
  * A wrapper function that adds an options page to setup Dropbox Backup
@@ -43,6 +43,15 @@ function backup_to_dropbox_admin_menu() {
  */
 function backup_to_dropbox_admin_menu_contents() {
     include( 'wp-backup-to-dropbox-options.php' );
+}
+
+/**
+ * A wrapper function for the file tree AJAX request
+ * @return void
+ */
+function backup_to_dropbox_file_tree() {
+    include('wp-backup-to-dropbox-file-tree.php');
+    die();
 }
 
 /**
@@ -63,11 +72,11 @@ function execute_drobox_backup() {
  */
 function monitor_dropbox_backup() {
     $last_action = get_option( 'backup-to-dropbox-last-action' );
-    //Two mins to allow for socket timeouts
-    if ( $last_action < strtotime( '-2 minutes' ) ) {
+    //5 mins to allow for socket timeouts and long uploads
+    if ( $last_action < strtotime( '-5 minutes' ) ) {
         $backup = new WP_Backup( new Dropbox_Facade(), null );
         if ( $backup->in_progress() ) {
-            $backup->log( WP_Backup::BACKUP_STATUS_FAILED, __( 'The backup process appears to have gone away. Resuming backup.' ) );
+            $backup->log( WP_Backup::BACKUP_STATUS_FAILED, __( 'The backup process appears to have gone away. Resuming backup.', 'wpbtd' ) );
             $backup->backup_now();
         }
     }
@@ -118,6 +127,7 @@ add_action( 'monitor_dropbox_backup_hook', 'monitor_dropbox_backup' );
 add_action( 'execute_periodic_drobox_backup', 'execute_drobox_backup' );
 add_action( 'execute_instant_drobox_backup', 'execute_drobox_backup' );
 add_action( 'admin_menu', 'backup_to_dropbox_admin_menu' );
+add_action( 'wp_ajax_file_tree', 'backup_to_dropbox_file_tree' );
 
 //i18n language text domain
 load_plugin_textdomain( 'wpbtd', true, 'wordpress-backup-to-dropbox/Languages/' );

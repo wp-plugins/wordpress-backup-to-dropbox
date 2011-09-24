@@ -3,7 +3,7 @@ Contributors: michael.dewildt
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=38SEXDYP28CFA
 Tags: backup, dropbox
 Requires at least: 3.0
-Tested up to: 3.1.2
+Tested up to: 3.2.1
 Stable tag: trunk
 
 A plugin for WordPress that automatically uploads your blogs files and a SQL dump of its database to Dropbox. Giving you
@@ -16,7 +16,8 @@ WordPress Backup to Dropbox has been created to give you piece of mind that your
 Just choose a day, time and how often you wish yor backup to be performed and kick back and wait for your websites files
 and a SQL dump of its database to be dropped in your Dropbox!
 
-You can set where you want your backup stored within Dropbox and on your server
+You can set where you want your backup stored within Dropbox and on your server as well as choose what files or directories,
+if any, you wish to exclude from the backup.
 
 The plugin uses [OAuth](http://en.wikipedia.org/wiki/OAuth) so your Dropbox account details are not stored for the
 plugin to gain access.
@@ -52,9 +53,11 @@ from other errors, however a message should be displayed informing you of the re
 
 2. [A Dropbox account](https://www.dropbox.com/referrals/NTM1NTcwNjc5)
 
-For more information, news and updates please visit my blog - http://www.mikeyd.com.au/wordpress-backup-to-dropbox/
+= More Information =
 
-You can pull the source from my BitBucket account - https://bitbucket.org/michaeldewildt/wordpress-backup-to-dropbox
+For news and updates please visit my blog - http://www.mikeyd.com.au/wordpress-backup-to-dropbox/
+
+= Issues =
 
 If you notice any bugs or want to request a feature please do so on BitBucket - https://bitbucket.org/michaeldewildt/wordpress-backup-to-dropbox/issues/
 
@@ -63,6 +66,7 @@ If you notice any bugs or want to request a feature please do so on BitBucket - 
 * Arabic (ar) - [Saif Maki](www.saif.cz.cc)
 * Brazilian Portuguese (pt_BR) - [Techload Informatica](http://www.techload.com.br)
 * Galician (gl_ES), Spanish (es_ES), Portuguese (pt_PT) - [WordPress Galego](http://gl.wordpress.org/)
+* Indonesian (id_ID) - [Bejana](http://www.bejana.com/)
 
 == Installation ==
 
@@ -90,11 +94,34 @@ your Dropbox.
 Yes you can, however you need to modify the max execution time in your php.ini manually.
 [Please read this blog post for more information.](http://www.mikeyd.com.au/2011/05/24/setting-the-maximum-execution-time-when-php-is-running-in-safe-mode/)
 
+= How can I revert to a previous version of a backed up file? =
+Dropbox has this functionality built in and it is extremely easy to do.
+[Please read this blog post for more information.](http://www.mikeyd.com.au/2011/06/05/restoring-previous-versions-of-files-in-dropbox/)
+
+= How do I unlink the plugin from my Dropbox account? =
+You can unlink the plugin using the Dropbox website by navigating to the 'My Apps' tab within your account page. The my
+apps tab will list all the apps that you have connected to Dropbox and clicking the ‘X’ to the right of this plugin will
+unlink it from your account.
+
+= Why cant I see the exclude files and directories widget in Internet Explorer 7? =
+That is because it only supports IE8 or higher or any of the awesome modern better alternatives like Google Chrome, Firefox,
+Opera, etc. In order to use the widget you have no choice but to update to IE8 or any of the aforementioned browsers.
+
 == Screenshots ==
 
 1. The WordPress Backup to Dropbox options page
 
 == Changelog ==
+
+= 0.9 =
+* Added feature #5 the ability to exclude certain files or directories from the backup
+* Fixed a bug where the plugin would not recognise that an account had been unlikned within Dropbox
+* Fixed issue #18 where Windows users getting errors during backup
+* Added a text domain to i18n functions and added pt_BR, pt_PT, es_ES, gl_GL and AR translation files
+* Added 'desktop.ini' to the ignored file list
+* Fixed issue #28 - repeated 'Backup appears to have gone away' messages to do with the suhosin.memory_limit being exceeded
+* Fixed issue #31 Recognize alternate wp-content location via wp-config.php constants
+* Added an unlink account button to unlink your Dropbox account
 
 = 0.8 =
 * A major change to improve performance. The wordpress files are no longer zipped, instead they are individually uploaded
@@ -127,6 +154,4 @@ if they have been modified since the last backup.
 
 == Upgrade Notice ==
 
-* A major change to improve performance. The WordPress files are no longer zipped, instead they are individually uploaded
-if they have been modified since the last backup. It is highly recommended that you upgrade because zipping will no longer
-be supported.
+* This release fixes numerous minor bugs and adds the ability for uses to exclude certain files and directories from a backup

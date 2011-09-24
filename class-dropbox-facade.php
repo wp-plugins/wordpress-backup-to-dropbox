@@ -40,8 +40,7 @@ class Dropbox_Facade {
      * Creates a new instance of the Dropbox facade by connecting to Dropbox with the application tokens and then create
      * a new instance of the Dropbox api for use by ths facade.
      *
-     * @param boolean $delete_pending_authorization
-     * @return void
+     * @return \Dropbox_Facade
      */
     function __construct() {
         $this->tokens = get_option( 'backup-to-dropbox-tokens' );
@@ -53,17 +52,17 @@ class Dropbox_Facade {
             $oauth = new Dropbox_OAuth_PEAR( self::CONSUMER_KEY, self::CONSUMER_SECRET );
 
             //If we have not got an access token then we need to grab one
-            if ( $this->tokens[ 'access' ] == false ) {
+            if ( $this->tokens['access'] == false ) {
                 try {
-                    $oauth->setToken( $this->tokens[ 'request' ] );
-                    $this->tokens[ 'access' ] = $oauth->getAccessToken();
+                    $oauth->setToken( $this->tokens['request'] );
+                    $this->tokens['access'] = $oauth->getAccessToken();
                     $this->save_tokens();
                 } catch ( Exception $e ) {
                     //Authorization failed so we are still pending
-                    $this->tokens[ 'access' ] = false;
+                    $this->tokens['access'] = false;
                 }
             } else {
-                $oauth->setToken( $this->tokens[ 'access' ] );
+                $oauth->setToken( $this->tokens['access'] );
             }
             $this->dropbox = new Dropbox_API( $oauth );
         }
@@ -78,7 +77,7 @@ class Dropbox_Facade {
 			return false;
 		}
 		$info = $this->get_account_info();
-		if ( array_key_exists( 'error', $info ) ) {
+		if ( isset( $info['error'] ) ) {
 			$this->tokens = null;
 			$this->save_tokens();
 			return false;
@@ -93,7 +92,7 @@ class Dropbox_Facade {
      */
     public function get_authorize_url() {
         $oauth = new Dropbox_OAuth_PEAR( self::CONSUMER_KEY, self::CONSUMER_SECRET );
-        $this->tokens[ 'request' ] = $oauth->getRequestToken();
+        $this->tokens['request'] = $oauth->getRequestToken();
         $this->save_tokens();
         return $oauth->getAuthorizeUrl();
     }
@@ -154,18 +153,26 @@ class Dropbox_Facade {
      */
     function get_directory_contents( $path ) {
         static $directory_cache = array();
-        if ( !array_key_exists( $path, $directory_cache ) ) {
-            $directory_cache[ $path ] = array();
+        if ( !isset( $directory_cache[$path] ) ) {
+            $directory_cache[$path] = array();
             try {
                 $meta_data = $this->dropbox->getMetaData( $path );
-                foreach ( $meta_data[ 'contents' ] as $val ) {
-                    if ( !$val[ 'is_dir' ] ) {
-                        $directory_cache[ $path ][ ] = basename( $val[ 'path' ] );
+                foreach ( $meta_data['contents'] as $val ) {
+                    if ( !$val['is_dir'] ) {
+                        $directory_cache[$path][] = basename( $val['path'] );
                     }
                 }
                 //No need to do anything with the exception because the dir does not exist
             } catch ( Dropbox_Exception_NotFound $e ) {}
         }
-        return $directory_cache[ $path ];
+        return $directory_cache[$path];
     }
+
+	/**
+	 * @return void
+	 */
+	public function unlink_account() {
+		delete_option( 'backup-to-dropbox-tokens' );
+		$this->tokens['access'] = false;
+	}
 }
