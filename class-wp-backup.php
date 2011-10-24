@@ -94,10 +94,8 @@ class WP_Backup {
         }
 
         if ( !get_option( 'backup-to-dropbox-last-action' ) ) {
-            add_option( 'backup-to-dropbox-last-action', time(), null, 'no' );
+            add_option( 'backup-to-dropbox-last-action', array( time(), null ), null, 'no' );
         }
-
-	    $this->create_htaccess_file( $this->create_dump_dir() );
     }
 
     /**
@@ -139,7 +137,7 @@ class WP_Backup {
 
                 $file = realpath( $file );
 				if ( is_file( $file ) ) {
-                    update_option( 'backup-to-dropbox-last-action', time() );
+                    update_option( 'backup-to-dropbox-last-action', array( time(), $file ) );
 
 					$trimmed_file = basename( $file );
 					if ( File_List::in_ignore_list( $trimmed_file ) ) {
@@ -195,6 +193,12 @@ class WP_Backup {
         }
 
         list( $dump_location, , , ) = $this->get_options();
+	    if ( !is_writable( $dump_location ) ) {
+			$msg = sprintf(__( "A database backup cannot be created because WordPress does not have write access to '%s', please create the folder '%s' manually.", 'wpbtd'),
+							dirname( $dump_location ), basename( $dump_location ));
+			$this->log( self::BACKUP_STATUS_WARNING, $msg );
+		    return false;
+	    }
 		$filename =  ABSPATH . $dump_location . DIRECTORY_SEPARATOR . DB_NAME . '-backup.sql';
         $handle = fopen( $filename, 'w+' );
         if ( !$handle ) {
@@ -442,7 +446,7 @@ class WP_Backup {
 	 * @throws Exception
 	 * @return string
 	 */
-	private function create_dump_dir() {
+	public function create_dump_dir() {
 		list( $dump_location, ) = $this->get_options();
 		$dump_dir = ABSPATH . $dump_location;
 		if ( !file_exists( $dump_dir ) ) {
@@ -450,8 +454,8 @@ class WP_Backup {
 			if ( !@mkdir( $dump_dir ) ) {
 				throw new Exception(
 				sprintf(
-						__( "Error while creating the local dump directory. Please ensure that the directories parent ('%s') is writable.", 'wpbtd'),
-						dirname( $dump_dir )
+						__( "A database backup cannot be created because WordPress does not have write access to '%s', please create the folder '%s' manually.", 'wpbtd'),
+						dirname( $dump_dir ), basename( $dump_dir )
 					)
 				);
 			}
@@ -463,10 +467,11 @@ class WP_Backup {
      * Creates a htaccess file within the dump directory, if it does not already exist, so the public cannot see the sql
      * backup within the backup directory
      * @throws Exception
-     * @param  $dump_dir
      * @return void
      */
-    private function create_htaccess_file( $dump_dir ) {
+    public function create_htaccess_file() {
+	    list( $dump_location, ) = $this->get_options();
+		$dump_dir = ABSPATH . $dump_location;
         $htaccess = $dump_dir . '/.htaccess';
         if ( !file_exists( $htaccess ) ) {
 	        //It really pains me to use the error suppressor here but PHP error handling sucks :-(
@@ -474,7 +479,7 @@ class WP_Backup {
 	        if ( !$fh ) {
 				throw new Exception(
 					sprintf(
-						__( "Error while creating htaccess file. Please ensure that local dump directory ('%s') is writable.", 'wpbtd'),
+						__( "A database backup cannot be created because the local dump directory ('%s') is not writable.", 'wpbtd'),
 						$dump_dir
 					)
 				);
@@ -531,4 +536,12 @@ class WP_Backup {
         }
         return !( $status == self::BACKUP_STATUS_FINISHED || $status == self::BACKUP_STATUS_FAILED );
     }
+
+	/**
+	 * Returns a tuple of the last action time and the file processed
+	 * @return array
+	 */
+	public function get_last_action() {
+		return get_option( 'backup-to-dropbox-last-action' );
+	}
 }
