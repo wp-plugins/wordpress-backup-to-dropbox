@@ -20,13 +20,24 @@
  */
 global $wpdb;
 $backup = new WP_Backup( null, $wpdb );
-if ( !$backup->in_progress() ) {
+
+if ( array_key_exists( 'stop_backup', $_POST ) ) {
+	check_admin_referer( 'backup_to_dropbox_monitor_stop' );
+	$backup->stop();
+} else if ( array_key_exists( 'start_backup', $_POST ) ) {
+	check_admin_referer( 'backup_to_dropbox_monitor_stop' );
 	$backup->backup_now();
+	$started = true;
 }
+
 ?>
 <script type="text/javascript" language="javascript">
 	function reload() {
-		jQuery('#progress').load(ajaxurl, { action:'progress' });
+		jQuery.post(ajaxurl, { action:'progress' },  function(data) {
+			if (data.length > 3) {
+				jQuery('#progress').html(data);
+			}
+		});
 		setTimeout("reload()",1000);
 	}
     jQuery(document).ready(function ($) {
@@ -51,7 +62,23 @@ if ( !$backup->in_progress() ) {
 	<h2><?php _e( 'WordPress Backup to Dropbox', 'wpbtd' ); ?></h2>
 	<p class="description"><?php printf( __( 'Version %s', 'wpbtd' ), BACKUP_TO_DROPBOX_VERSION ) ?></p>
 	<h3><?php _e( 'Backup Progress', 'wpbtd' ); ?></h3>
-	<div id="progress"></div>
+	<div id="progress">
+		<?php
+		if ( $started || $backup->is_sheduled() )
+			echo '<p>' . __( 'Your backup has been sheduled and is waiting for WordPress to start it. This could take a few minutes, so now is a good time to go and grab a cup of coffee.' ) . '</p>';
+		else
+			echo '<p>' . __( 'No backup in progess.' ) . '</p>';
+		?>
+	</div>
+	<form id="backup_to_dropbox_options" name="backup_to_dropbox_options" action="options-general.php?page=backup-to-dropbox&monitor=true" method="post">
+		<?php if ( $backup->in_progress() || isset($started) || $backup->is_sheduled() ): ?>
+			<input type="submit" id="stop_backup" name="stop_backup" class="button-secondary" value="<?php _e( 'Stop Backup', 'wpbtd' ); ?>">
+		<?php else: ?>
+			<input type="submit" id="start_backup" name="start_backup" class="button-secondary" value="<?php _e( 'Start Backup', 'wpbtd' ); ?>">
+		<?php endif; ?>
 
-	<a href="options-general.php?page=backup-to-dropbox"><?php _e( 'Back to options', 'wpbtd' ); ?></a>
+		<?php _e( 'or', 'wpbtd' ); ?>
+		<a href="options-general.php?page=backup-to-dropbox"><?php _e( 'Back to options', 'wpbtd' ); ?></a>
+		 <?php wp_nonce_field( 'backup_to_dropbox_monitor_stop' ); ?>
+	</form>
 </div>

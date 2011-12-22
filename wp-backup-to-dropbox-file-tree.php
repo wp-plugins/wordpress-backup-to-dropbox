@@ -27,7 +27,7 @@ include_once( 'class-file-list.php' );
 $file_list = new File_List( $wpdb );
 
 $_POST['dir'] = urldecode( $_POST['dir'] );
-if ( file_exists( $_POST['dir'] ) && is_readable( $_POST['dir'] ) ) {
+if ( file_exists( $_POST['dir'] ) && is_readable($_POST['dir']) ) {
     $files = scandir( $_POST['dir'] );
     natcasesort( $files );
     if ( count( $files ) > 2 ) { /* The 2 accounts for . and .. */
@@ -36,7 +36,7 @@ if ( file_exists( $_POST['dir'] ) && is_readable( $_POST['dir'] ) ) {
         foreach ( $files as $file ) {
             if ( file_exists( $_POST['dir'] . $file ) && $file != '.' && $file != '..' && is_dir( $_POST['dir'] . $file ) ) {
 
-	            if ( !is_readable(  $_POST['dir'] . $file ) || ( $_POST['dir'] == dirname( ABSPATH ) . '/' && !strstr( $file, basename( ABSPATH ) ) ) ) {
+	            if ( !is_readable( $_POST['dir'] ) || $_POST['dir'] == dirname( ABSPATH ) . '/' && !strstr( $file, basename( ABSPATH ) ) ) {
 		            continue;
 	            }
 
