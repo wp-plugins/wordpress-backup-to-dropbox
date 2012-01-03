@@ -6,7 +6,7 @@ Requires at least: 3.0
 Tested up to: 3.3
 Stable tag: trunk
 
-WordPress Backup to Dropbox automatically creates a backup of your entire website, including all files and its database, within Dropbox.
+Keep your valuable WordPress website, its media and database backed up to Dropbox in minutes with this sleek, easy to use plugin.
 
 == Description ==
 
