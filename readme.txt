@@ -117,6 +117,14 @@ Opera, etc. In order to use the widget you have no choice but to update to IE8 o
 
 == Changelog ==
 
+= 0.9.3 =
+* Moved settings and monitor to their own paret menu
+* Database bacups are now removed after they are uploaded to Dropbox
+* Fixed free space issue
+* Made it so non standard WP_CONTENT_DIR is backed up
+* Lots of other bug fixes and performance updates
+* Fixed a bug in the file exclusion list that was preventing folders from being marked as partial
+
 = 0.9.2 =
 * Fixed issues when open basedir restriction is on
 * Removed DISABLE_WP_CRON check for users who use a real cron
@@ -169,4 +177,4 @@ if they have been modified since the last backup.
 
 == Upgrade Notice ==
 
-* Updates to the backup monitor, new clear history and stop backup button and some bug fixes
+* Lots of perfomrance and bug fixes

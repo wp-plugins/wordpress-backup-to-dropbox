@@ -3,7 +3,7 @@
 Plugin Name: WordPress Backup to Dropbox
 Plugin URI: http://wpb2d.com
 Description: Keep your valuable WordPress website, its media and database backed up to Dropbox in minutes with this sleek, easy to use plugin.
-Version: 0.9.2
+Version: 0.9.3
 Author: Michael De Wildt
 Author URI: http://www.mikeyd.com.au
 License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
@@ -21,20 +21,37 @@ License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
 		along with this program; if not, write to the Free Software
 		Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-include_once( 'class-dropbox-facade.php' );
-include_once( 'class-wp-backup.php' );
+define( 'USE_BUNDLED_PEAR', true );
+define( 'BACKUP_TO_DROPBOX_VERSION', '0.9.3' );
 
-define( 'BACKUP_TO_DROPBOX_VERSION', '0.9.2' );
+require_once( 'Dropbox_API/autoload.php' );
+require_once( 'Classes/class-file-list.php' );
+require_once( 'Classes/class-dropbox-facade.php' );
+require_once( 'Classes/class-wp-backup-config.php' );
+require_once( 'Classes/class-wp-backup.php' );
 
 //We need to set the PEAR_Includes folder in the path
-set_include_path( get_include_path() . PATH_SEPARATOR . dirname( __FILE__ ) . '/PEAR_Includes' );
+if (USE_BUNDLED_PEAR)
+	set_include_path( dirname( __FILE__ ) . '/PEAR_Includes' . PATH_SEPARATOR . get_include_path() );
+else
+	set_include_path( get_include_path() . PATH_SEPARATOR . dirname( __FILE__ ) . '/PEAR_Includes' );
 
 /**
  * A wrapper function that adds an options page to setup Dropbox Backup
  * @return void
  */
 function backup_to_dropbox_admin_menu() {
-	add_options_page( 'Backup to Dropbox', 'Backup to Dropbox ', 'edit_plugins', 'backup-to-dropbox', 'backup_to_dropbox_admin_menu_contents' );
+	$imgUrl = rtrim( WP_PLUGIN_URL, '/' ) . '/wordpress-backup-to-dropbox/Images/WordPressBackupToDropbox_16.png';
+
+	$text = __( 'Backup', 'wpbtd' );
+	add_utility_page( $text, $text, 'edit_plugins', 'backup-to-dropbox', 'backup_to_dropbox_admin_menu_contents', $imgUrl);
+
+	$text = __( 'Settings', 'wpbtd' );
+	add_submenu_page( 'backup-to-dropbox', $text, $text, 'edit_plugins', 'backup-to-dropbox', 'backup_to_dropbox_admin_menu_contents' );
+
+	$backup = new WP_Backup_Config();
+	$text = $backup->is_scheduled() ? __( 'Monitor Backup', 'wpbtd' ) : __( 'Backup Now', 'wpbtd' );
+	add_submenu_page( 'backup-to-dropbox', $text, $text, 'edit_plugins', 'backup-to-dropbox-monitor', 'backup_to_dropbox_monitor' );
 }
 
 /**
@@ -43,10 +60,21 @@ function backup_to_dropbox_admin_menu() {
  */
 function backup_to_dropbox_admin_menu_contents() {
 	$uri = rtrim( WP_PLUGIN_URL, '/' ) . '/wordpress-backup-to-dropbox';
-	if (isset($_GET['monitor']))
-		include( 'wp-backup-to-dropbox-monitor.php' );
-	else
-		include( 'wp-backup-to-dropbox-options.php' );
+	include( 'Views/wp-backup-to-dropbox-options.php' );
+}
+
+/**
+ * A wrapper function that includes the backup to Dropbox monitor page
+ * @return void
+ */
+function backup_to_dropbox_monitor() {
+	$dropbox = new Dropbox_Facade();
+	if ( !$dropbox->is_authorized() ) {
+		backup_to_dropbox_admin_menu_contents();
+	} else {
+		$uri = rtrim( WP_PLUGIN_URL, '/' ) . '/wordpress-backup-to-dropbox';
+		include( 'Views/wp-backup-to-dropbox-monitor.php' );
+	}
 }
 
 /**
@@ -54,7 +82,7 @@ function backup_to_dropbox_admin_menu_contents() {
  * @return void
  */
 function backup_to_dropbox_file_tree() {
-	include('wp-backup-to-dropbox-file-tree.php');
+	include( 'Views/wp-backup-to-dropbox-file-tree.php' );
 	die();
 }
 
@@ -63,7 +91,7 @@ function backup_to_dropbox_file_tree() {
  * @return void
  */
 function backup_to_dropbox_progress() {
-	include('wp-backup-to-dropbox-progress.php');
+	include( 'Views/wp-backup-to-dropbox-progress.php' );
 	die();
 }
 
@@ -80,13 +108,12 @@ function execute_drobox_backup() {
  * @return void
  */
 function monitor_dropbox_backup() {
-	global $wpdb;
-	$backup = new WP_Backup( new Dropbox_Facade(), $wpdb );
-	list($current_action,) = $backup->get_current_action();
+	$config = new WP_Backup_Config();
+	$action = $config->get_current_action();
 
 	//5 mins to allow for socket timeouts and long uploads
-	if ( $backup->in_progress() && ( $current_action < time() - 300  ) ) {
-		$backup->log( WP_Backup::BACKUP_STATUS_WARNING, __( 'The backup process appears to have gone away. Resuming backup.' ) );
+	if ( $config->in_progress() && ( $action['time'] < strtotime( current_time( 'mysql' ) ) - 300  ) ) {
+		$config->log( WP_Backup::BACKUP_STATUS_WARNING, __( 'The backup process appears to have gone away. Resuming backup.' ) );
 		wp_schedule_single_event( time(), 'run_dropbox_backup_hook' );
 	}
 }
@@ -95,8 +122,7 @@ function monitor_dropbox_backup() {
  * @return void
  */
 function run_dropbox_backup() {
-	global $wpdb;
-	$backup = new WP_Backup( new Dropbox_Facade(), $wpdb );
+	$backup = new WP_Backup( new Dropbox_Facade(), new WP_Backup_Config() );
 	$backup->execute();
 }
 
