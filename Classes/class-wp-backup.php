@@ -254,12 +254,12 @@ class WP_Backup {
 			$sql_file_name = $this->get_sql_file_name();
 			$uploaded_files = $this->config->get_uploaded_files();
 			if ( !in_array($sql_file_name, $uploaded_files) ) {
-				$this->config->set_current_action( __( 'Creating SQL backup', 'wpbtd' ), $sql_file_name );
+				$this->config->set_current_action( __( 'Creating SQL backup', 'wpbtd' ) );
 				$this->backup_database();
 			}
 
 			$this->backup_path( ABSPATH, $dropbox_location );
-			if ( !strstr( WP_CONTENT_DIR, ABSPATH ) ) {
+			if ( defined( 'WP_CONTENT_DIR' ) && !strstr( WP_CONTENT_DIR, ABSPATH ) ) {
 				$this->backup_path( WP_CONTENT_DIR, $dropbox_location . '/wp-content' );
 			}
 
@@ -284,7 +284,6 @@ class WP_Backup {
 	 */
 	public function stop() {
 		$this->config->log( WP_Backup::BACKUP_STATUS_WARNING, __( 'Backup stopped by user.', 'wpbtd' ) );
-		$this->config->set_current_action( __( 'Stopping backup', 'wpbtd' ) );
 		$this->config->set_in_progress( false );
 		$this->config->set_last_backup_time( time() );
 		$this->config->clean_up();
@@ -310,32 +309,6 @@ class WP_Backup {
 			}
 		}
 		return $dump_dir;
-	}
-
-	/**
-	 * Creates a htaccess file within the dump directory, if it does not already exist, so the public cannot see the sql
-	 * backup within the backup directory
-	 * @throws Exception
-	 * @return void
-	 */
-	public function create_htaccess_file() {
-		$options = $this->config->get_options();
-		$dump_dir = ABSPATH . $options['dump_location'];
-		$htaccess = $dump_dir . '/.htaccess';
-		if ( !file_exists( $htaccess ) ) {
-			//It really pains me to use the error suppressor here but PHP error handling sucks :-(
-			$fh = @fopen( $htaccess, 'w' );
-			if ( !$fh ) {
-				throw new Exception(
-					sprintf(
-						__( "A database backup cannot be created because the local dump directory ('%s') is not writable.", 'wpbtd'),
-						$dump_dir
-					)
-				);
-			}
-			fwrite( $fh, 'deny from all' );
-			fclose( $fh );
-		}
 	}
 
 	private function get_sql_file_name() {
