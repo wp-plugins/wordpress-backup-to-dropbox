@@ -3,7 +3,7 @@ Contributors: michael.dewildt
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=38SEXDYP28CFA
 Tags: backup, dropbox
 Requires at least: 3.0
-Tested up to: 3.3.1
+Tested up to: 3.4
 Stable tag: trunk
 
 Keep your valuable WordPress website, its media and database backed up to Dropbox in minutes with this sleek, easy to use plugin.
@@ -21,17 +21,23 @@ if any, you wish to exclude from the backup.
 The plugin uses [OAuth](http://en.wikipedia.org/wiki/OAuth) so your Dropbox account details are not stored for the
 plugin to gain access.
 
-Checkout the website - [http://wpb2d.com](http://wpb2d.com)
+Checkout the website - http://wpb2d.com
 
 = Setup =
 
-Once installed, the authorization process is pretty easy -
+Once installed, the authorization process is easy -
 
-1. The plugin will ask you to authorize the plugin with Dropbox.
+1. When you first access the plugin’s options page, it will ask you to authorize the plugin with Dropbox.
 
-2. A new window open where Dropbox will ask you to authenticate in order allow this plugin access to your Dropbox.
+2. A new window will open and Dropbox will ask you to authenticate and grant the plugin access.
 
-3. Once you have granted access to the plugin click continue to setup your backup
+3. Finally, click continue to setup your backup.
+
+= Minimum Requirements =
+
+1. PHP 5.2 or higher
+
+2. [A Dropbox account](https://www.dropbox.com/referrals/NTM1NTcwNjc5)
 
 = Errors and Warnings =
 
@@ -48,11 +54,11 @@ The plugin attempts to recover from an error that may occur during a backup wher
 reason. In this case the backup will be restarted from where it left off. Unfortunately, at this time, it cannot recover
 from other errors, however a message should be displayed informing you of the reason for failure.
 
-= Minimum Requirements =
+= Premium Extensions =
 
-1. PHP 5.2 or higher
+Premium extensions are downloadable snippets of code that add extra functionality to WordPress Backup to Dropbox. The extensions are features have been requested but may not appeal to all users. Instead of complicating the plugin by adding them to the core, premium extensions allows you to choose what extra functionality you want.
 
-2. [A Dropbox account](https://www.dropbox.com/referrals/NTM1NTcwNjc5)
+Premium extensions can be purchased securely using [PayPal](http://www.paypal.com) and installed with the click of a button. For more information pelase visit http://wpb2d.com/premium/.
 
 = More Information =
 
@@ -73,18 +79,24 @@ If you notice any bugs or want to request a feature please do so on GitHub - htt
 * Taiwanese (zh_TN) - [HostUCan](http://www.hostucan.com/)
 * French (fr_FR) - [Yassine HANINI](http://www.yassine-hanini.info/)
 * Persian (fa_IR) - [Reza-sh](http://www.rezaonline.net/blog)
+* Dutch (nl_NL) - [Rinze Hiddink](http://www.rinzehiddink.nl)
+* Hebrew (he_HE) - [Menachem](http://luckyboost.com)
 
 == Installation ==
 
 1. Upload the contents of `wordpress-dropbox-backup.zip` to the `/wp-content/plugins/` directory or use WordPress' built-in plugin install tool
-2. Activate the plugin through the 'Plugins' menu within WordPress
-3. Authorize the plugin with Dropbox by following the instructions in the settings page found under Settings->Backup to Dropbox
+2. Once installed, you can access the plugins settings page under the new Backup menu
+3. The first time you access the settings you will be prompted to authorize it with Dropbox
 
 == Frequently Asked Questions ==
 
 = How do I get a free Dropbox account? =
 
 Browse to http://db.tt/szCyl7o and create a free account.
+
+= Nothing seems to happen when backing up, whats up? =
+
+Your server settings (.htaccess file) might be blocking wp-cron wich is required to start the backup process. Please refer to the following thread for information on to solve the issue - http://wordpress.org/support/topic/plugin-wordpress-backup-to-dropbox-nothing-seems-to-happen-when-backing-up
 
 = Why doesn't my backup execute at the exact time I set? =
 
@@ -117,6 +129,12 @@ Opera, etc. In order to use the widget you have no choice but to update to IE8 o
 2. WordPress Backup to Dropbox monitor
 
 == Changelog ==
+
+= 1.0 =
+* Removed backup has gone away warning that seems to be confusing users
+* Made a whole bunch of perfomrance improvmentws
+* Added premium extensions
+* See  http://www.mikeyd.com.au/2012/04/30/wordpress-backup-to-dropbox-1-0 for details
 
 = 0.9.4 =
 * Fixed an issue where the SQL backup was not being uploaded to Dropbox
