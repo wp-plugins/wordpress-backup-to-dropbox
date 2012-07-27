@@ -17,11 +17,15 @@
  *          Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110, USA.
  */
 class WP_Backup_Extension_Manager {
+	private static $instance;
 
 	private $key = 'c7d97d59e0af29b2b2aa3ca17c695f96';
 
 	public static function construct() {
-		return new self();
+		if (!self::$instance)
+			self::$instance = new self();
+
+		return self::$instance;
 	}
 
 	public function __construct() {
@@ -70,7 +74,9 @@ class WP_Backup_Extension_Manager {
 	}
 
 	public function install($name, $file) {
-		define('FS_METHOD', 'direct');
+		if (!defined('FS_METHOD'))
+			define('FS_METHOD', 'direct');
+
 		WP_Filesystem();
 
 		$params = array(
@@ -135,8 +141,11 @@ class WP_Backup_Extension_Manager {
 
 	private function call($func) {
 		$installed = $this->get_installed();
-		foreach ($installed as $name => $file)
-			$this->get_instance($name)->$func();
+		foreach ($installed as $name => $file) {
+			$obj = $this->get_instance($name);
+			if ($obj->is_enabled())
+				$obj->$func();
+		}
 	}
 
 	public function on_start() {

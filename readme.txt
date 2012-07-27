@@ -3,7 +3,7 @@ Contributors: michael.dewildt
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=38SEXDYP28CFA
 Tags: backup, dropbox
 Requires at least: 3.0
-Tested up to: 3.4
+Tested up to: 3.4.1
 Stable tag: trunk
 
 Keep your valuable WordPress website, its media and database backed up to Dropbox in minutes with this sleek, easy to use plugin.
@@ -96,9 +96,12 @@ If you notice any bugs or want to request a feature please do so on GitHub - htt
 
 Browse to http://db.tt/szCyl7o and create a free account.
 
+= Where is my backup located? Can I move it? =
+By default your backup is located in 'Applications/wpb2d'. You can move the 'wpb2d' folder anywhere your want in your Dropbox. You can even rename it to 'my super awesome backup' or anything else if you want!
+
 = Nothing seems to happen when backing up, whats up? =
 
-Your server settings (.htaccess file) might be blocking wp-cron wich is required to start the backup process. Please refer to the following thread for information on to solve the issue - http://wordpress.org/support/topic/plugin-wordpress-backup-to-dropbox-nothing-seems-to-happen-when-backing-up
+Your server settings (.htaccess file) might be blocking wp-cron which is required to start the backup process. Please refer to the following thread for information on to solve the issue - http://wordpress.org/support/topic/plugin-wordpress-backup-to-dropbox-nothing-seems-to-happen-when-backing-up
 
 = Why doesn't my backup execute at the exact time I set? =
 
@@ -106,9 +109,12 @@ The backup is executed using WordPress' scheduling system that, unlike a cron jo
 blog is accessed after the scheduled time.
 
 = Where is my database SQL dump located? =
-The database is backed up into a file named '[database name]-backup.sql'. It will be found within the local backup location
-you have set. Using the default settings the file will be found at the path 'WordPressBackups/wp-content/backups' within
-your Dropbox.
+The database is backed up into a file named '[database name]-backup.sql'. It will be will be found at the path 'wp-content/backups' within
+the App folder of your Dropbox.
+
+= Wow! My second backup was heaps faster. Why is that? =
+In order to save time and bandwidth the plugin only uploads files that have changed since the last backup. The only exception
+is your SQL dump file that will be uploaded every time.
 
 = Can I perform a backup if my PHP installation has safe mode enabled? =
 Yes you can, however you need to modify the max execution time in your php.ini manually.
@@ -131,6 +137,14 @@ Opera, etc. In order to use the widget you have no choice but to update to IE8 o
 2. WordPress Backup to Dropbox monitor
 
 == Changelog ==
+
+= 1.2 =
+* Reuduced directory nesting to one subfolder and fixed up error message
+* Fixed issues where accounts where being incorrectly unliked
+* Added singltons for better performance
+* Fixed issue #63 Out of memory in settings page - display error in exlude widget if memory is too low
+* Fixed issue #64 UnexpectedValueException
+* WordPress core and plugin database tables are now backed up separatly
 
 = 1.1 =
 * Updated the Dropbox PHP API to fix various issues processing some files

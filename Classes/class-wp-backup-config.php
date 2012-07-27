@@ -20,6 +20,7 @@
  */
 include_once('class-file-list.php');
 class WP_Backup_Config {
+	private static $instance;
 
 	const BACKUP_STATUS_STARTED = 0;
 	const BACKUP_STATUS_FINISHED = 1;
@@ -29,7 +30,10 @@ class WP_Backup_Config {
 	const MAX_HISTORY_ITEMS = 100;
 
 	public static function construct() {
-		return new self();
+		if (!self::$instance)
+			self::$instance = new self();
+
+		return self::$instance;
 	}
 
 	public function __construct() {
@@ -40,16 +44,13 @@ class WP_Backup_Config {
 		$options = get_option('backup-to-dropbox-options');
 		if (!$options) {
 			$options = array(
-				'dropbox_location' => 'WordPressBackup',
+				'dropbox_location' => null,
 				'last_backup_time' => false,
 				'in_progress' => false,
 				'store_in_subfolder' => false,
 			);
 			add_option('backup-to-dropbox-options', $options, null, 'no');
 		}
-
-		if (!$this->get_option('dropbox_location'))
-			$this->set_option('dropbox_location', 'WordPressBackup');
 
 		$actions = get_option('backup-to-dropbox-actions');
 		if (!$actions) {
@@ -134,7 +135,9 @@ class WP_Backup_Config {
 
 	public function set_memory_limit() {
 		if (function_exists('memory_get_usage'))
-			@ini_set('memory_limit', '256M');
+			@ini_set('memory_limit', BACKUP_TO_DROPBOX_MEMORY_LIMIT .'M');
+
+		return (int)rtrim(ini_get('memory_limit'), 'M');
 	}
 
 	public function set_current_action($msg) {
@@ -212,9 +215,9 @@ class WP_Backup_Config {
 	}
 
 	public function set_options($options) {
-		static $regex = '/[^A-Za-z0-9-_.@\/]/';
+		static $regex = '/[^A-Za-z0-9-_.@]/';
 		$errors = array();
-		$error_msg = __('Invalid directory path. Path must only contain alphanumeric characters and the forward slash (\'/\') to separate directories.', 'wpbtd');
+		$error_msg = __('The sub directory must only contain alphanumeric characters.', 'wpbtd');
 
 		foreach ($options as $key => $value) {
 			preg_match($regex, $value, $matches);
@@ -228,14 +231,8 @@ class WP_Backup_Config {
 
 		if (empty($errors)) {
 			$newOptions = array();
-			foreach ($options as $key => $value) {
+			foreach ($options as $key => $value)
 				$newOptions[$key] = $value;
-				if (strstr($key, 'location')) {
-					$newOptions[$key] = ltrim($newOptions[$key], '/');
-					$newOptions[$key] = rtrim($newOptions[$key], '/');
-					$newOptions[$key] = preg_replace('/[\/]+/', '/', $newOptions[$key]);
-				}
-			}
 
 			$options = $this->as_array(get_option('backup-to-dropbox-options'));
 			foreach ($newOptions as $key => $value) {

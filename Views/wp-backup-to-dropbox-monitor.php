@@ -18,14 +18,15 @@
  *          along with this program; if not, write to the Free Software
  *          Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110, USA.
  */
-$config = new WP_Backup_Config();
+$config = WP_Backup_Config::construct();
+$backup = new WP_Backup();
 
 if (array_key_exists('stop_backup', $_POST)) {
 	check_admin_referer('backup_to_dropbox_monitor_stop');
-	WP_Backup::construct()->stop();
+	$backup->stop();
 } else if (array_key_exists('start_backup', $_POST)) {
 	check_admin_referer('backup_to_dropbox_monitor_stop');
-	WP_Backup::construct()->backup_now();
+	$backup->backup_now();
 	$started = true;
 }
 

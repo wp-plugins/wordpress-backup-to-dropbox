@@ -3,7 +3,7 @@
 Plugin Name: WordPress Backup to Dropbox
 Plugin URI: http://wpb2d.com
 Description: Keep your valuable WordPress website, its media and database backed up to Dropbox in minutes with this sleek, easy to use plugin.
-Version: 1.1
+Version: 1.2
 Author: Michael De Wildt
 Author URI: http://www.mikeyd.com.au
 License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
@@ -22,7 +22,8 @@ License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
 		Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 define('USE_BUNDLED_PEAR', true);
-define('BACKUP_TO_DROPBOX_VERSION', '1.1');
+define('BACKUP_TO_DROPBOX_MEMORY_LIMIT', 150);
+define('BACKUP_TO_DROPBOX_VERSION', '1.2');
 define('BACKUP_TO_DROPBOX_ERROR_TIMEOUT', 5); //seconds
 define('EXTENSIONS_DIR', implode(array(WP_CONTENT_DIR, 'plugins', 'wordpress-backup-to-dropbox', 'Extensions'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR);
 
@@ -31,6 +32,9 @@ require_once('Classes/class-file-list.php');
 require_once('Classes/class-dropbox-facade.php');
 require_once('Classes/class-wp-backup-config.php');
 require_once('Classes/class-wp-backup.php');
+require_once('Classes/class-wp-backup-database.php');
+require_once('Classes/class-wp-backup-database-core.php');
+require_once('Classes/class-wp-backup-database-plugins.php');
 require_once('Classes/class-wp-backup-output.php');
 require_once('Classes/class-wp-backup-extension.php');
 require_once('Classes/class-wp-backup-extension-manager.php');
@@ -56,8 +60,7 @@ function backup_to_dropbox_admin_menu() {
 	$text = __('Backup Settings', 'wpbtd');
 	add_submenu_page('backup-to-dropbox', $text, $text, 'activate_plugins', 'backup-to-dropbox', 'backup_to_dropbox_admin_menu_contents');
 
-	$backup = new WP_Backup_Config();
-	$text = $backup->is_scheduled() ? __('Monitor Backup', 'wpbtd') : __('Backup Now', 'wpbtd');
+	$text = WP_Backup_Config::construct()->is_scheduled() ? __('Monitor Backup', 'wpbtd') : __('Backup Now', 'wpbtd');
 
 	add_submenu_page('backup-to-dropbox', $text, $text, 'activate_plugins', 'backup-to-dropbox-monitor', 'backup_to_dropbox_monitor');
 
@@ -130,7 +133,7 @@ function execute_drobox_backup() {
  * @return void
  */
 function monitor_dropbox_backup() {
-	$config = new WP_Backup_Config();
+	$config = WP_Backup_Config::construct();
 	$action = $config->get_current_action();
 
 	//5 mins to allow for socket timeouts and long uploads
@@ -142,7 +145,8 @@ function monitor_dropbox_backup() {
  * @return void
  */
 function run_dropbox_backup() {
-	WP_Backup::construct()->execute();
+	$backup = new WP_Backup();
+	$backup->execute();
 }
 
 /**

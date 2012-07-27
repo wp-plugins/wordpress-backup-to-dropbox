@@ -16,23 +16,32 @@
  *          along with this program; if not, write to the Free Software
  *          Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110, USA.
  */
-$config = WP_Backup_Config::construct();
+class WP_Backup_Database_Plugins extends WP_Backup_Database {
+	public function __construct($wpdb = null) {
+		parent::__construct('plugins', $wpdb);
+	}
 
-if (!$config->in_progress())
-	spawn_cron();
+	public function execute() {
+		if ($this->exists())
+			return false;
 
-$action = $config->get_current_action();
-$file_count = count($config->get_processed_files());
+		$this->config->set_current_action(__('Creating SQL backup of your WordPress plugins', 'wpbtd'));
 
-if ($action && $config->in_progress()): ?>
-	<p>
-		<strong><?php echo date('H:i:s', $action['time']) ?>: </strong>
-		<?php echo $action['message']; ?>
-	</p>
-	<?php if ($file_count > 0 ): ?>
-		<p>
-			<strong><?php echo date('H:i:s', strtotime(current_time('mysql'))) ?>: </strong>
-			<?php echo sprintf(__('Processed %d files.', 'wpbtd'), $file_count); ?>
-		</p>
-	<?php endif; ?>
-<?php endif; ?>
+		$this->write_db_dump_header();
+
+		$tables = $this->database->get_results('SHOW TABLES', ARRAY_N);
+		$core_tables = array_values($this->database->tables());
+		$tables_to_backup = array();
+
+		foreach ($tables as $t) {
+			$table = $t[0];
+			if (!in_array($table, $core_tables))
+				$tables_to_backup[] = $table;
+		}
+
+		if (!empty($tables_to_backup))
+			$this->backup_database_tables($tables_to_backup);
+
+		return $this->close_file();
+	}
+}
