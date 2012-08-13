@@ -70,36 +70,35 @@ class Dropbox_Facade {
 		if (!$this->tokens['access']) {
 			return false;
 		}
-		try {
-			$info = $this->get_account_info();
-			if (isset($info['error'])) {
-				$this->unlink_account();
-				return false;
-			} else {
-				return true;
-			}
-		} catch (Dropbox_Exception_BadOAuth $e) {
+
+		$info = $this->get_account_info();
+		if (isset($info['error'])) {
 			$this->unlink_account();
-		} catch (Dropbox_Exception_BadToken $e) {
-			$this->unlink_account();
+			return false;
+		} else {
+			return true;
 		}
-		return false;
 	}
 
 	public function get_authorize_url() {
-		try {
-			$oauth = new Dropbox_OAuth_PEAR(self::CONSUMER_KEY, self::CONSUMER_SECRET);
-			$this->tokens['request'] = $oauth->getRequestToken();
-			$this->save_tokens();
-			return $oauth->getAuthorizeUrl();
-		} catch (HTTP_OAuth_Consumer_Exception_InvalidResponse $e) {
-			$this->unlink_account();
-			throw $e;
-		}
+		$oauth = new Dropbox_OAuth_PEAR(self::CONSUMER_KEY, self::CONSUMER_SECRET);
+		$this->tokens['request'] = $oauth->getRequestToken();
+		$this->save_tokens();
+		return $oauth->getAuthorizeUrl();
 	}
 
 	public function get_account_info() {
-		return $this->dropbox->getAccountInfo();
+		$retries = 0;
+		$e = null;
+		while ($retries < self::RETRY_COUNT) {
+			try {
+				return $this->dropbox->getAccountInfo();
+			} catch (Exception $e) {
+				$retries++;
+				sleep(BACKUP_TO_DROPBOX_ERROR_TIMEOUT);
+			}
+		}
+		throw $e;
 	}
 
 	private function save_tokens() {
