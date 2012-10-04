@@ -18,7 +18,6 @@
  *          along with this program; if not, write to the Free Software
  *          Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110, USA.
  */
-include_once('class-wp-backup.php');
 class File_List {
 
 	private static $ignored_files = array('.DS_Store', 'Thumbs.db', 'desktop.ini');
@@ -30,8 +29,6 @@ class File_List {
 	}
 
 	public function __construct() {
-		delete_option('backup-to-dropbox-file-list');
-
 		$file_list = get_option('backup-to-dropbox-excluded-files');
 		if ($file_list === false) {
 			$this->excluded_files = array();

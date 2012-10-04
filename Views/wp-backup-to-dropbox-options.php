@@ -32,7 +32,7 @@ try {
 	$config = WP_Backup_Config::construct();
 	$backup = new WP_Backup();
 
-	$disable_backup_now = $config->in_progress();
+	$disable_backup_now = $config->get_option('in_progress');
 
 	//We have a form submit so update the schedule and options
 	if (array_key_exists('save_changes', $_POST)) {
@@ -132,24 +132,10 @@ try {
 	}
 </script>
 <style type="text/css">
-	.backup_error {
-		margin-left: 10px;
-		color: red;
-	}
-
-	.backup_ok {
-		margin-left: 10px;
-		color: green;
-	}
-
-	.backup_warning {
-		margin-left: 10px;
-		color: orange;
-	}
-
 	.history_box {
 		max-height: 140px;
 		overflow-y: scroll;
+		margin: 0 0 0 10px;
 	}
 
 	.message_box {
@@ -215,28 +201,20 @@ try {
 			<?php } ?>
 		<h3><?php _e('History', 'wpbtd'); ?></h3>
 		<?php
-		$backup_history = $config->get_history();
+		$backup_history = array_reverse($config->get_history());
 		if ($backup_history) {
-			echo '<div class="history_box">';
-			foreach ($backup_history as $hist) {
-				list($backup_time, $status, $msg) = $hist;
-				$backup_date = date('Y-m-d', $backup_time);
-				$backup_time_str = date('H:i:s', $backup_time);
-				switch ($status) {
-					case WP_Backup_Config::BACKUP_STATUS_STARTED:
-						echo "<span class='backup_ok'>" . sprintf(__('Backup started on %s at %s', 'wpbtd'), $backup_date, $backup_time_str) . "</span><br />";
-						break;
-					case WP_Backup_Config::BACKUP_STATUS_FINISHED:
-						echo "<span class='backup_ok'>" . sprintf(__('Backup completed on %s at %s', 'wpbtd'), $backup_date, $backup_time_str) . "</span><br />";
-						break;
-					case WP_Backup_Config::BACKUP_STATUS_WARNING:
-						echo "<span class='backup_warning'>" . sprintf(__('Backup warning on %s at %s: %s', 'wpbtd'), $backup_date, $backup_time_str, $msg) . "</span><br />";
-						break;
-					default:
-						echo "<span class='backup_error'>" . sprintf(__('Backup error on %s at %s: %s', 'wpbtd'), $backup_date, $backup_time_str, $msg) . "</span><br />";
-				}
+			echo '<ol class="history_box">';
+			foreach ($backup_history as $backup_time) {
+
+				$blog_time = strtotime(date('Y-m-d H', strtotime(current_time('mysql'))) . ':00:00');
+				$blog_time += $backup_time - strtotime(date('Y-m-d H') . ':00:00');
+
+				$backup_date = date('l F j, Y', $blog_time);
+				$backup_time_str = date('H:i:s', $blog_time);
+
+				echo '<li>' . sprintf(__('Backup completed on %s at %s.'), $backup_date, $backup_time_str) . '</li>';
 			}
-			echo '</div>';
+			echo '</ol>';
 			echo '<input type="submit" id="clear_history" name="clear_history"" class="bump button-secondary" value="' . __('Clear history', 'wpbtd') . '">';
 		} else {
 			echo '<p style="margin-left: 10px;">' . __('No history', 'wpbtd') . '</p>';

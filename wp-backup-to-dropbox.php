@@ -3,7 +3,7 @@
 Plugin Name: WordPress Backup to Dropbox
 Plugin URI: http://wpb2d.com
 Description: Keep your valuable WordPress website, its media and database backed up to Dropbox in minutes with this sleek, easy to use plugin.
-Version: 1.2.2
+Version: 1.3
 Author: Michael De Wildt
 Author URI: http://www.mikeyd.com.au
 License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
@@ -23,7 +23,7 @@ License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
 */
 define('USE_BUNDLED_PEAR', true);
 define('BACKUP_TO_DROPBOX_MEMORY_LIMIT', 150);
-define('BACKUP_TO_DROPBOX_VERSION', '1.2.2');
+define('BACKUP_TO_DROPBOX_VERSION', '1.3');
 define('BACKUP_TO_DROPBOX_ERROR_TIMEOUT', 5); //seconds
 define('EXTENSIONS_DIR', implode(array(WP_CONTENT_DIR, 'plugins', 'wordpress-backup-to-dropbox', 'Extensions'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR);
 
@@ -60,8 +60,7 @@ function backup_to_dropbox_admin_menu() {
 	$text = __('Backup Settings', 'wpbtd');
 	add_submenu_page('backup-to-dropbox', $text, $text, 'activate_plugins', 'backup-to-dropbox', 'backup_to_dropbox_admin_menu_contents');
 
-	$text = WP_Backup_Config::construct()->is_scheduled() ? __('Monitor Backup', 'wpbtd') : __('Backup Now', 'wpbtd');
-
+	$text = __('Backup Log', 'wpbtd');
 	add_submenu_page('backup-to-dropbox', $text, $text, 'activate_plugins', 'backup-to-dropbox-monitor', 'backup_to_dropbox_monitor');
 
 	WP_Backup_Extension_Manager::construct()->add_menu_items();
@@ -124,9 +123,20 @@ function backup_to_dropbox_progress() {
  * @return void
  */
 function execute_drobox_backup() {
-	WP_Backup_Config::construct()->log(WP_Backup_Config::BACKUP_STATUS_STARTED);
-	wp_schedule_single_event(time(), 'run_dropbox_backup_hook');
-	wp_schedule_event(time(), 'every_min', 'monitor_dropbox_backup_hook');
+	$config = WP_Backup_Config::construct();
+	$config
+		->clear_log()
+		->log(sprintf(__('Backup started on %s.', 'wpbtd'), date("l F j, Y", strtotime(current_time('mysql')))))
+		;
+
+	$config->set_option('in_progress', true);
+
+	if (defined('WPB2D_TEST_MODE')) {
+		run_dropbox_backup();
+	} else {
+		wp_schedule_single_event(time(), 'run_dropbox_backup_hook');
+		wp_schedule_event(time(), 'every_min', 'monitor_dropbox_backup_hook');
+	}
 }
 
 /**
@@ -134,19 +144,28 @@ function execute_drobox_backup() {
  */
 function monitor_dropbox_backup() {
 	$config = WP_Backup_Config::construct();
-	$action = $config->get_current_action();
+	$action = array_pop($config->get_log());
 
 	//5 mins to allow for socket timeouts and long uploads
-	if ($action && $config->in_progress() && ($action['time'] < strtotime(current_time('mysql')) - 300 ))
+	if ($action && $config->get_option('in_progress') && ($action['time'] < strtotime(current_time('mysql')) - 300)) {
+		$config
+			->log_error(sprintf(__('There has been no backup activity for a long time. Attempting to resume the backup.' , 'wpbtd'), 5))
+			->set_option('is_running', false)
+			;
+
 		wp_schedule_single_event(time(), 'run_dropbox_backup_hook');
+	}
 }
 
 /**
  * @return void
  */
 function run_dropbox_backup() {
-	$backup = new WP_Backup();
-	$backup->execute();
+	$options = WP_Backup_Config::construct();
+	if (!$options->get_option('is_running')) {
+		$options->set_option('is_running', true);
+		WP_Backup::construct()->execute();
+	}
 }
 
 /**
@@ -162,7 +181,7 @@ function backup_to_dropbox_cron_schedules($schedules) {
 		),
 		'daily' => array(
 			'interval' => 86400,
-			'display' => 'Weekly'
+			'display' => 'Daily'
 		),
 		'weekly' => array(
 			'interval' => 604800,
@@ -187,6 +206,10 @@ function backup_to_dropbox_cron_schedules($schedules) {
 	);
 	return array_merge($schedules, $new_schedules);
 }
+
+//Delete unused options from previous versions
+delete_option('backup-to-dropbox-actions');
+delete_option('backup-to-dropbox-file-list');
 
 //WordPress filters and actions
 add_filter('cron_schedules', 'backup_to_dropbox_cron_schedules');

@@ -18,21 +18,30 @@
  */
 $config = WP_Backup_Config::construct();
 
-if (!$config->in_progress())
+if (!$config->get_option('in_progress'))
 	spawn_cron();
 
-$action = $config->get_current_action();
-$file_count = count($config->get_processed_files());
+$log = $config->get_log();
 
-if ($action && $config->in_progress()): ?>
-	<p>
-		<strong><?php echo date('H:i:s', $action['time']) ?>: </strong>
-		<?php echo $action['message']; ?>
-	</p>
-	<?php if ($file_count > 0 ): ?>
-		<p>
-			<strong><?php echo date('H:i:s', strtotime(current_time('mysql'))) ?>: </strong>
-			<?php echo sprintf(__('Processed %d files.', 'wpbtd'), $file_count); ?>
-		</p>
-	<?php endif; ?>
+if (empty($log)): ?>
+	<p><?php _e('You have not run a backup yet. When you do you will see a log of it here.'); ?></p>
+<?php else: ?>
+	<ul>
+		<?php foreach (array_reverse($log) as $log_item ): ?>
+			<li>
+			<?php
+				echo date('H:i:s', $log_item['time']) . ' : ' . $log_item['message'];
+				$files = json_decode($log_item['files'], true);
+			?>
+			<?php if (!empty($files)): ?>
+				<a class="view-files" href="#"><?php _e('View uploaded files', 'wpbtd') ?>&raquo;</a>
+				<ul class="files">
+					<?php foreach ($files as $file): ?>
+						<li title="<?php echo sprintf(__('Last modified: %s'), date('F j, Y, H:i:s', $file['mtime'])) ?>"><?php echo $file['file'] ?></li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endif; ?>
+			</li>
+		<?php endforeach; ?>
+	</ul>
 <?php endif; ?>

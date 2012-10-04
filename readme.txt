@@ -3,14 +3,14 @@ Contributors: michael.dewildt
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=38SEXDYP28CFA
 Tags: backup, dropbox
 Requires at least: 3.0
-Tested up to: 3.4.1
+Tested up to: 3.4.2
 Stable tag: trunk
 
 Keep your valuable WordPress website, its media and database backed up to Dropbox in minutes with this sleek, easy to use plugin.
 
 == Description ==
 
-[WordPress Backup to Dropbox](http://wpb2d.com) has been created to give you piece of mind that your blog is backed up on a regular basis.
+[WordPress Backup to Dropbox](http://wpb2d.com) has been created to give you peace of mind that your blog is backed up on a regular basis.
 
 Just choose a day, time and how often you wish yor backup to be performed and kick back and wait for your websites files
 and a SQL dump of its database to be dropped in your Dropbox!
@@ -139,6 +139,10 @@ Opera, etc. In order to use the widget you have no choice but to update to IE8 o
 
 == Changelog ==
 
+= 1.3 =
+* Overhauled logging of a backup to get more visibility of what is happening during a backup.
+* More info here => http://www.mikeyd.com.au/2012/10/02/wordpress-backup-to-dropbox-1-3
+
 = 1.2.2 =
 * Removed zipping of the SQL dump due to random PHP memory leaks... intersingly the Zip extension does not share the same issue. Ah PHP you keep me on my toes!
 
@@ -173,4 +177,4 @@ Opera, etc. In order to use the widget you have no choice but to update to IE8 o
 
 == Upgrade Notice ==
 
-* Removed zipping of the SQL dump due to random PHP memory leaks, please update ASAP. I am looking into a new Dropbox API to solve issues with uploading large SQL files so hold tight if your in this category.
+* Better logging! :-) More info here => http://www.mikeyd.com.au/2012/10/02/wordpress-backup-to-dropbox-1-3

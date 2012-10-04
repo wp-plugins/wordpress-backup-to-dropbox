@@ -33,16 +33,32 @@ if (array_key_exists('stop_backup', $_POST)) {
 ?>
 <script type="text/javascript" language="javascript">
 	function reload() {
-		jQuery.post(ajaxurl, { action:'progress' },  function(data) {
-			if (data.length > 3) {
+		jQuery('.files').hide();
+		jQuery.post(ajaxurl, { action : 'progress' }, function(data) {
+			if (data.length) {
 				jQuery('#progress').html(data);
+				jQuery('.view-files').on('click', function() {
+					$files = jQuery(this).next();
+
+					$files.toggle();
+					$files.find('li').each(function() {
+						$this = jQuery(this);
+						$this.css(
+							'background',
+							'url(<?php echo $uri ?>/JQueryFileTree/images/' + $this.text().slice(-3).replace(/^\.+/,'') + '.png) left top no-repeat'
+						);
+					});
+
+				});
 			}
 		});
-		setTimeout("reload()", 9000);
+		<?php if ($config->get_option('in_progress') || isset($started)): ?>
+			setTimeout("reload()", 15000);
+		<?php endif; ?>
 	}
-    jQuery(document).ready(function ($) {
+	jQuery(document).ready(function ($) {
 		reload();
-    });
+	});
 </script>
 <style type="text/css">
 	.backup_error {
@@ -53,7 +69,147 @@ if (array_key_exists('stop_backup', $_POST)) {
 	}
 	.backup_warning {
 		color: orange;
-    }
+	}
+	#progress {
+		max-height: 400px;
+		overflow-y: scroll;
+		margin: 0 0 10px 0;
+	}
+	ul {
+		margin: 0;
+	}
+	.files {
+		display: none;
+		margin-left: 58px;
+	}
+	.files li {
+		margin: 5px 0;
+		padding-left: 20px;
+	}
+	.view-files {
+		text-decoration: none;
+	}
+
+	.loading {
+		padding: 5px;
+		clear: both;
+	}
+
+	#circleG {
+		width: 150px;
+	}
+
+	.circleG {
+		background-color: #FFFFFF;
+		float: left;
+		height: 15px;
+		margin-left: 8px;
+		width: 15px;
+		-webkit-animation-name: bounce_circleG;
+		-webkit-border-radius: 10px;
+		-webkit-animation-duration: 1.9500000000000002s;
+		-webkit-animation-iteration-count: infinite;
+		-webkit-animation-direction: linear;
+		-moz-animation-name: bounce_circleG;
+		-moz-border-radius: 10px;
+		-moz-animation-duration: 1.9500000000000002s;
+		-moz-animation-iteration-count: infinite;
+		-moz-animation-direction: linear;
+		opacity: 0.3;
+		-o-animation-name: bounce_circleG;
+		border-radius: 10px;
+		-o-animation-duration: 1.9500000000000002s;
+		-o-animation-iteration-count: infinite;
+		-o-animation-direction: linear;
+		-ms-animation-name: bounce_circleG;
+		-ms-animation-duration: 1.9500000000000002s;
+		-ms-animation-iteration-count: infinite;
+		-ms-animation-direction: linear;
+		opacity: 0.3
+	}
+
+	#circleG_1 {
+		-webkit-animation-delay: 0.39s;
+		-moz-animation-delay: 0.39s;
+		-o-animation-delay: 0.39s;
+		-ms-animation-delay: 0.39s;
+	}
+
+	#circleG_2 {
+		-webkit-animation-delay: 0.91s;
+		-moz-animation-delay: 0.91s;
+		-o-animation-delay: 0.91s;
+		-ms-animation-delay: 0.91s;
+	}
+
+	#circleG_3 {
+		-webkit-animation-delay: 1.17s;
+		-moz-animation-delay: 1.17s;
+		-o-animation-delay: 1.17s;
+		-ms-animation-delay: 1.17s;
+	}
+
+	@-webkit-keyframes bounce_circleG {
+		0% {
+			opacity: 0.3
+		}
+
+		50% {
+			opacity: 1;
+			background-color: #000000
+		}
+
+		100% {
+			opacity: 0.3
+		}
+
+	}
+
+	@-moz-keyframes bounce_circleG {
+		0% {
+			opacity: 0.3
+		}
+
+		50% {
+			opacity: 1;
+			background-color: #000000
+		}
+
+		100% {
+			opacity: 0.3
+		}
+
+	}
+
+	@-o-keyframes bounce_circleG {
+		0% {
+			opacity: 0.3
+		}
+
+		50% {
+			opacity: 1;
+			background-color: #000000
+		}
+
+		100% {
+			opacity: 0.3
+		}
+	}
+
+	@-ms-keyframes bounce_circleG {
+		0% {
+			opacity: 0.3
+		}
+
+		50% {
+			opacity: 1;
+			background-color: #000000
+		}
+
+		100% {
+			opacity: 0.3
+		}
+	}
 </style>
 <div class="wrap">
 	<div class="icon32"><img width="36px" height="36px"
@@ -61,17 +217,17 @@ if (array_key_exists('stop_backup', $_POST)) {
 								 alt="WordPress Backup to Dropbox Logo"></div>
 	<h2><?php _e('WordPress Backup to Dropbox', 'wpbtd'); ?></h2>
 	<p class="description"><?php printf(__('Version %s', 'wpbtd'), BACKUP_TO_DROPBOX_VERSION) ?></p>
-	<h3><?php _e('Backup Progress', 'wpbtd'); ?></h3>
+	<h3><?php _e('Backup Log', 'wpbtd'); ?></h3>
 	<div id="progress">
-		<?php
-		if (isset($started) || $config->is_scheduled())
-			echo '<p>' . __('Your backup has been scheduled and is waiting for WordPress to start it. This could take a few minutes, so now is a good time to go and grab a cup of coffee.', 'wpbtd') . '</p>';
-		else
-			echo '<p>' . __('No backup in progress.', 'wpbtd') . '</p>';
-		?>
+		<div id="circleG">
+			<div id="circleG_1" class="circleG"></div>
+			<div id="circleG_2" class="circleG"></div>
+			<div id="circleG_3" class="circleG"></div>
+		</div>
+		<div class="loading"><?php _e('Loading...') ?></div>
 	</div>
 	<form id="backup_to_dropbox_options" name="backup_to_dropbox_options" action="admin.php?page=backup-to-dropbox-monitor" method="post">
-		<?php if ($config->in_progress() || isset($started) || $config->is_scheduled()): ?>
+		<?php if ($config->get_option('in_progress') || isset($started)): ?>
 			<input type="submit" id="stop_backup" name="stop_backup" class="button-secondary" value="<?php _e('Stop Backup', 'wpbtd'); ?>">
 		<?php else: ?>
 			<input type="submit" id="start_backup" name="start_backup" class="button-secondary" value="<?php _e('Start Backup', 'wpbtd'); ?>">
