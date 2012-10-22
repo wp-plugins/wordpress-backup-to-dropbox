@@ -58,7 +58,9 @@ class WP_Backup {
 					if (!$this->config->get_option('in_progress'))
 						return;
 
-					$percent_done = round(($processed_file_count / $total_files) * 100, 0);
+					$percent_done = __('unknown', 'wpbtd');
+					if ($total_files > 0)
+						$percent_done = round(($processed_file_count / $total_files) * 100, 0);
 
 					$this->config
 						->add_processed_files($current_processed_files)
@@ -96,7 +98,9 @@ class WP_Backup {
 
 			$this->output->end();
 			$this->config->log(sprintf(__('A total of %s files were processed.'), $processed_file_count));
-			$this->config->set_option('total_file_count', $processed_file_count);
+
+			if ($processed_file_count > 800) //I doub't very much a wp installation can get smaller then this
+				$this->config->set_option('total_file_count', $processed_file_count);
 		}
 	}
 
