@@ -133,6 +133,7 @@ class Dropbox_Facade {
 
 	public function unlink_account() {
 		try {
+			$this->oauth->setToken(null);
 			$token = $this->oauth->getRequestToken();
 		} catch (Exception $e) {
 			$token = false;
