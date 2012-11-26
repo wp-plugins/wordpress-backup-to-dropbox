@@ -102,16 +102,28 @@ By default your backup is located in 'Applications/wpb2d'. You can move the 'wpb
 
 = Nothing seems to happen when backing up, whats up? =
 
-Your server settings (.htaccess file) might be blocking wp-cron which is required to start the backup process. Please refer to the following thread for information on to solve the issue - http://wordpress.org/support/topic/plugin-wordpress-backup-to-dropbox-nothing-seems-to-happen-when-backing-up
+Your server settings (.htaccess file) might be blocking wp-cron which is required to start the backup process. You will need to add the following to a .htaccess file in your WordPress root directory:
+
+<Files "wp-cron.php">
+Allow from All
+Satisfy Any
+</Files>
+
+For information please refer to this thread - http://wordpress.org/support/topic/plugin-wordpress-backup-to-dropbox-nothing-seems-to-happen-when-backing-up
 
 = Why doesn't my backup execute at the exact time I set? =
 
-The backup is executed using WordPress' scheduling system that, unlike a cron job, kicks of tasks the next time your
-blog is accessed after the scheduled time.
+This could be because your blog's timezone is not set. By defauly it is set to UTC+0, so if you set your backup to start at midnight it will
+be kicked off at 4pm (PST) in LA. You can change your blogs timezone in WordPress' General Settings.
+
+If your timezone is correct then WordPress' scheduling system could be the problem. Unlike a cron job, kicks of tasks the next time your
+blog is accessed after the scheduled time. If you are using a caching solution then the plugin may be blocking calls to wp-cron.php, if so
+you will need to whitelist this file in the plugin settings.
 
 = Where is my database SQL dump located? =
-The database is backed up into a file named '[database name]-backup.sql'. It will be will be found at the path 'wp-content/backups' within
-the App folder of your Dropbox.
+The database is backed up into two files named '[database name]-backup-core.sql' that contains all the core WordPress tables and data,
+and '[database name]-backup-plugins.sql' that cotains tables and data related to your plugins.
+These files will be will be found at the path 'wp-content/backups' within the App folder of your Dropbox.
 
 = Wow! My second backup was heaps faster. Why is that? =
 In order to save time and bandwidth the plugin only uploads files that have changed since the last backup. The only exception
@@ -139,6 +151,27 @@ Opera, etc. In order to use the widget you have no choice but to update to IE8 o
 3. Premium Extensions: Add extra functionality with ease and a 60 day money back guarantee.
 
 == Changelog ==
+
+= 1.4 =
+
+New features and updates
+* Implemented a brand new Dropbox API library that utilises chunked uploads for large files.
+* Updated the Dutch translations.
+* Addded the umsak funciton to attempt to run the backup under elevated privileges.
+* Set the memory limit to -1 (unlimited) for servers that allow it, the backup will still only use what it needs.
+* Added 'unknown%' to the backup estimation instead of the initial estimate to avoid confusion.
+* Added a safe mode warning to the settings page so that users can diagnose fix issues related to PHP memory and time limits
+* Set the mysql wait time out at the start of a backup
+* The file exclude widget has been updated to toggle excluded files better thanks to [Joe Maller](http://github.com/joemaller).
+In addition ticks have been replaced with crosses to better portray its an exclude function.
+
+Bugfixes
+* Fixed some minor issues in the OAuth flow.
+* Fixed an issue where options will not update due to validation of an option from an older version. This affected starting and stoping of backups, updating email adresses and other options in certain circumstances.
+* Fixed up the backup time estimation so it cannot be set to zero or an impossibly low number.
+* Fixed memory limit issues in the file list by adding a max directory depth of 10
+* Prefixed save actions with wpb2d to avoid clashes with other plugins
+* Fixed an issue where WP option cache was interferring with stopping backups
 
 = 1.3 =
 * Overhauled logging of a backup to get more visibility of what is happening during a backup.

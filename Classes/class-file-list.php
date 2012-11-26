@@ -20,7 +20,13 @@
  */
 class File_List {
 
-	private static $ignored_files = array('.DS_Store', 'Thumbs.db', 'desktop.ini');
+	private static $ignored_patterns = array(
+		'.DS_Store', 'Thumbs.db', 'desktop.ini',
+		'.git', '.gitignore', '.gitmodules',
+		'.svn',
+		'.sass-cache',
+	);
+
 	private $excluded_files;
 	private $excluded_dirs;
 
@@ -37,12 +43,6 @@ class File_List {
 		} else {
 			list($this->excluded_dirs, $this->excluded_files) = $file_list;
 		}
-	}
-
-	public function test_memory() {
-		$limit = WP_Backup_Config::construct()->set_memory_limit();
-		if ($limit < 64)
-			throw new Exception(sprintf(__('Memory limit could not be set and your settings are too low to use this widget, please increase your PHP memory_limit to at least %sM (%sM is recommended).'), 64, 150));
 	}
 
 	public function set_included($path) {
@@ -62,6 +62,9 @@ class File_List {
 	}
 
 	public function is_excluded($path) {
+		if ($this->in_ignore_list($path))
+			return true;
+
 		if (is_dir($path))
 			return $this->is_excluded_dir($path);
 		else
@@ -111,6 +114,7 @@ class File_List {
 	private function is_partial_dir($dir) {
 		if (is_dir($dir) && is_readable($dir)) {
 			$files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir), RecursiveIteratorIterator::SELF_FIRST, RecursiveIteratorIterator::CATCH_GET_CHILD);
+			$files->setMaxDepth(10);
 			foreach ($files as $file) {
 				if ($file == $dir)
 					continue;
@@ -140,6 +144,9 @@ class File_List {
 	}
 
 	public static function in_ignore_list($file) {
-		return in_array($file, self::$ignored_files);
+		foreach (self::$ignored_patterns as $pattern) {
+			if (preg_match('/' . preg_quote($pattern) . '/', $file))
+				return true;
+		}
 	}
 }

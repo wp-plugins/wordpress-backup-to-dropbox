@@ -3,7 +3,7 @@
 Plugin Name: WordPress Backup to Dropbox
 Plugin URI: http://wpb2d.com
 Description: Keep your valuable WordPress website, its media and database backed up to Dropbox in minutes with this sleek, easy to use plugin.
-Version: 1.3
+Version: 1.4
 Author: Michael De Wildt
 Author URI: http://www.mikeyd.com.au
 License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
@@ -21,13 +21,13 @@ License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
 		along with this program; if not, write to the Free Software
 		Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-define('USE_BUNDLED_PEAR', true);
-define('BACKUP_TO_DROPBOX_MEMORY_LIMIT', 150);
-define('BACKUP_TO_DROPBOX_VERSION', '1.3');
-define('BACKUP_TO_DROPBOX_ERROR_TIMEOUT', 5); //seconds
+define('BACKUP_TO_DROPBOX_VERSION', '1.4');
 define('EXTENSIONS_DIR', implode(array(WP_CONTENT_DIR, 'plugins', 'wordpress-backup-to-dropbox', 'Extensions'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR);
 
-require_once('Dropbox_API/src/Dropbox/autoload.php');
+require_once('Dropbox/Dropbox/API.php');
+require_once('Dropbox/Dropbox/OAuth/Consumer/ConsumerAbstract.php');
+require_once('Dropbox/Dropbox/OAuth/Consumer/Curl.php');
+
 require_once('Classes/class-file-list.php');
 require_once('Classes/class-dropbox-facade.php');
 require_once('Classes/class-wp-backup-config.php');
@@ -39,12 +39,6 @@ require_once('Classes/class-wp-backup-output.php');
 require_once('Classes/class-wp-backup-extension.php');
 require_once('Classes/class-wp-backup-extension-manager.php');
 
-//We need to set the PEAR_Includes folder in the path
-if (USE_BUNDLED_PEAR)
-	set_include_path(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'PEAR_Includes' . PATH_SEPARATOR . get_include_path());
-else
-	set_include_path(get_include_path() . PATH_SEPARATOR . dirname(__FILE__) . DIRECTORY_SEPARATOR . 'PEAR_Includes');
-
 WP_Backup_Extension_Manager::construct()->init();
 
 /**
@@ -52,6 +46,11 @@ WP_Backup_Extension_Manager::construct()->init();
  * @return void
  */
 function backup_to_dropbox_admin_menu() {
+	//Register stylesheet
+	wp_register_style('wpb2d-style', plugins_url('wp-backup-to-dropbox.css', __FILE__) );
+
+	wp_enqueue_style('wpb2d-style');
+
 	$imgUrl = rtrim(WP_PLUGIN_URL, '/') . '/wordpress-backup-to-dropbox/Images/WordPressBackupToDropbox_16.png';
 
 	$text = __('WPB2D', 'wpbtd');
