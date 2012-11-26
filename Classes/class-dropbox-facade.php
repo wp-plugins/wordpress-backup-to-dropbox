@@ -73,7 +73,6 @@ class Dropbox_Facade {
 			$this->get_account_info();
 			return true;
 		} catch (Exception $e) {
-			$this->unlink_account();
 			return false;
 		}
 	}
