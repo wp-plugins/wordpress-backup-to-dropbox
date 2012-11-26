@@ -207,4 +207,4 @@ Opera, etc. In order to use the widget you have no choice but to update to IE8 o
 
 == Upgrade Notice ==
 
-* Better logging! :-) More info here => http://www.mikeyd.com.au/2012/10/04/wordpress-backup-to-dropbox-1-3/
+* Remember to re-authorize the plugin with Dropbox!
