@@ -73,8 +73,7 @@ class Dropbox_Facade {
 			$this->get_account_info();
 			return true;
 		} catch (Exception $e) {
-			delete_option('backup-to-dropbox-tokens');
-			self::$instance = new self();
+			$this->unlink_account();
 			return false;
 		}
 	}
@@ -133,8 +132,14 @@ class Dropbox_Facade {
 	}
 
 	public function unlink_account() {
+		try {
+			$token = $this->oauth->getRequestToken();
+		} catch (Exception $e) {
+			$token = false;
+		}
+
 		$this->tokens['access'] = false;
-		$this->tokens['request'] = $this->oauth->getRequestToken();
+		$this->tokens['request'] = $token;
 		$this->save_tokens();
 		$this->oauth->setToken($this->tokens['request']);
 	}
