@@ -73,6 +73,8 @@ class Dropbox_Facade {
 			$this->get_account_info();
 			return true;
 		} catch (Exception $e) {
+			delete_option('backup-to-dropbox-tokens');
+			self::$instance = new self();
 			return false;
 		}
 	}
