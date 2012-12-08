@@ -35,7 +35,7 @@ Once installed, the authorization process is easy -
 
 = Minimum Requirements =
 
-1. PHP 5.2 or higher
+1. PHP 5.2 or higher with [cURL support](http://www.php.net/manual/en/curl.installation.php)
 
 2. [A Dropbox account](https://www.dropbox.com/referrals/NTM1NTcwNjc5)
 
@@ -152,6 +152,15 @@ Opera, etc. In order to use the widget you have no choice but to update to IE8 o
 
 == Changelog ==
 
+= 1.4.1 =
+* Fixed exclude widget checkbox css position
+* Fixed issue where all files where being uploaded in subsequent backups
+* Fixed cannot access empty property fatal error
+* Moved the safe mode warning out of the settings page to the backup log
+* The backup log now logs to a file in 'wp-content/backups' that is uploaded to Dropbox at the end of a backup
+* Allow for multiple emails in the email extension
+* Allow for sub folders in the store in subfolder setting
+
 = 1.4 =
 
 * Implemented a brand new Dropbox API library that utilises chunked uploads for large files.
@@ -207,4 +216,4 @@ Opera, etc. In order to use the widget you have no choice but to update to IE8 o
 
 == Upgrade Notice ==
 
-* Remember to re-authorize the plugin with Dropbox!
+* After every update make sure that you check that your settings are still correct and run a test backup.

@@ -3,7 +3,7 @@
 Plugin Name: WordPress Backup to Dropbox
 Plugin URI: http://wpb2d.com
 Description: Keep your valuable WordPress website, its media and database backed up to Dropbox in minutes with this sleek, easy to use plugin.
-Version: 1.4
+Version: 1.4.1
 Author: Michael De Wildt
 Author URI: http://www.mikeyd.com.au
 License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
@@ -21,8 +21,9 @@ License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
 		along with this program; if not, write to the Free Software
 		Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-define('BACKUP_TO_DROPBOX_VERSION', '1.4');
+define('BACKUP_TO_DROPBOX_VERSION', '1.4.1');
 define('EXTENSIONS_DIR', implode(array(WP_CONTENT_DIR, 'plugins', 'wordpress-backup-to-dropbox', 'Extensions'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR);
+define('CHUNKED_UPLOAD_THREASHOLD', 10485760); //10 MB
 
 require_once('Dropbox/Dropbox/API.php');
 require_once('Dropbox/Dropbox/OAuth/Consumer/ConsumerAbstract.php');
@@ -38,6 +39,7 @@ require_once('Classes/class-wp-backup-database-plugins.php');
 require_once('Classes/class-wp-backup-output.php');
 require_once('Classes/class-wp-backup-extension.php');
 require_once('Classes/class-wp-backup-extension-manager.php');
+require_once('Classes/class-wp-backup-logger.php');
 
 WP_Backup_Extension_Manager::construct()->init();
 
@@ -124,13 +126,30 @@ function backup_to_dropbox_progress() {
 function execute_drobox_backup() {
 	@umask(0000);
 
-	$config = WP_Backup_Config::construct();
-	$config
-		->clear_log()
-		->log(sprintf(__('Backup started on %s.', 'wpbtd'), date("l F j, Y", strtotime(current_time('mysql')))))
-		;
+	WP_Backup_Logger::delete_log();
+	WP_Backup_Logger::log(sprintf(__('Backup started on %s.', 'wpbtd'), date("l F j, Y", strtotime(current_time('mysql')))));
 
-	$config->set_option('in_progress', true);
+	if (!extension_loaded('curl')) {
+		WP_Backup_Logger::log(sprintf(
+			__('Fatal Error: The cURL extension is not loaded. %sPlease ensure its installed and activated.%s', 'wpbtd'),
+			'<a href="http://php.net/manual/en/curl.installation.php">',
+			'</a>'
+		));
+		die();
+	}
+
+	if (ini_get('safe_mode')) {
+		$time = ini_get('max_execution_time');
+		WP_Backup_Logger::log(sprintf(
+			__("%sSafe mode%s is enabled on your server so the PHP time and memory limits cannot be set by the backup process. Your time limit is %s and your memory limit is %s, so if your backup fails it's highly probable that these settings are too low.", 'wpbtd'),
+			'<a href="http://php.net/manual/en/features.safe-mode.php">',
+			'</a>',
+			$time ? $time . __('seconds', 'wpbtd') : __('unlimited', 'wpbtd'),
+			ini_get('memory_limit')
+		));
+	}
+
+	WP_Backup_Config::construct()->set_option('in_progress', true);
 
 	if (defined('WPB2D_TEST_MODE')) {
 		run_dropbox_backup();
@@ -145,14 +164,12 @@ function execute_drobox_backup() {
  */
 function monitor_dropbox_backup() {
 	$config = WP_Backup_Config::construct();
-	$action = array_pop($config->get_log());
+	$mtime = filemtime(WP_Backup_Logger::get_log_file());
 
 	//5 mins to allow for socket timeouts and long uploads
-	if ($action && $config->get_option('in_progress') && ($action['time'] < strtotime(current_time('mysql')) - 300)) {
-		$config
-			->log_error(sprintf(__('There has been no backup activity for a long time. Attempting to resume the backup.' , 'wpbtd'), 5))
-			->set_option('is_running', false)
-			;
+	if ($config->get_option('in_progress') && ($mtime < time() - 300)) {
+		WP_Backup_Logger::log(sprintf(__('There has been no backup activity for a long time. Attempting to resume the backup.' , 'wpbtd'), 5));
+		$config->set_option('is_running', false);
 
 		wp_schedule_single_event(time(), 'run_dropbox_backup_hook');
 	}
@@ -211,6 +228,7 @@ function backup_to_dropbox_cron_schedules($schedules) {
 //Delete unused options from previous versions
 delete_option('backup-to-dropbox-actions');
 delete_option('backup-to-dropbox-file-list');
+delete_option('backup-to-dropbox-log');
 
 //WordPress filters and actions
 add_filter('cron_schedules', 'backup_to_dropbox_cron_schedules');

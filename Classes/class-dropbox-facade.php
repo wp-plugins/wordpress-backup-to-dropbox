@@ -22,7 +22,6 @@ class Dropbox_Facade {
 
 	const CONSUMER_KEY = 'u1i8xniul59ggxs';
 	const CONSUMER_SECRET = '0ssom5yd1ybebhy';
-	const CHUNKED_UPLOAD_THREASHOLD = 10485760; //10 MB
 
 	private static $instance = null;
 
@@ -42,13 +41,28 @@ class Dropbox_Facade {
         $this->oauth = new OAuth_Consumer_Curl(self::CONSUMER_KEY, self::CONSUMER_SECRET);
 		$this->tokens = get_option('backup-to-dropbox-tokens');
 
+		//Convert array to stdClass for the new API
+		if ($this->tokens && is_array($this->tokens['access'])) {
+			$accessToken = new stdClass;
+			$accessToken->oauth_token = $this->tokens['access']["token"];
+			$accessToken->oauth_token_secret = $this->tokens['access']["token_secret"];
+			$this->tokens['access'] = $accessToken;
+		}
+
+		try {
+			$this->init();
+		} catch (Exception $e) {
+			$this->unlink_account();
+			$this->init();
+		}
+	}
+
+	private function init() {
 		if (!$this->tokens) {
 			$this->tokens = array('access' => false, 'request' => $this->oauth->getRequestToken());
 			add_option('backup-to-dropbox-tokens', $this->tokens, null, 'no');
 			$this->oauth->setToken($this->tokens['request']);
-		}
-
-		if ($this->tokens['access']) {
+		} else if ($this->tokens['access']) {
 			$this->oauth->setToken($this->tokens['access']);
 		} else if ($this->tokens['request']) {
 			$this->oauth->setToken($this->tokens['request']);
@@ -73,7 +87,6 @@ class Dropbox_Facade {
 			$this->get_account_info();
 			return true;
 		} catch (Exception $e) {
-			$this->unlink_account();
 			return false;
 		}
 	}
@@ -114,8 +127,9 @@ class Dropbox_Facade {
 	}
 
 	public function get_directory_contents($path) {
-		if (!array_key_exists($path, $this->directory_cache)) {
+		if (!isset($this->directory_cache[$path])) {
 			try {
+				$this->directory_cache[$path] = array();
 				$response = $this->dropbox->metaData($path);
 
 				foreach ($response['body']->contents as $val) {
@@ -125,23 +139,19 @@ class Dropbox_Facade {
 				}
 			} catch (Exception $e) {
 				$this->create_directory($path);
-				$this->directory_cache[$path] = array();
 			}
 		}
 		return $this->directory_cache[$path];
 	}
 
 	public function unlink_account() {
-		try {
-			$this->oauth->setToken(null);
-			$token = $this->oauth->getRequestToken();
-		} catch (Exception $e) {
-			$token = false;
-		}
+		$this->tokens = false;
 
-		$this->tokens['access'] = false;
-		$this->tokens['request'] = $token;
-		$this->save_tokens();
-		$this->oauth->setToken($this->tokens['request']);
+		$token = new stdClass;
+		$token->oauth_token = false;
+		$token->oauth_token_secret = false;
+
+		$this->oauth->setToken($token);
+		delete_option('backup-to-dropbox-tokens');
 	}
 }

@@ -38,7 +38,7 @@ try {
 	if (array_key_exists('wpb2d_save_changes', $_POST)) {
 		check_admin_referer('backup_to_dropbox_options_save');
 
-		if (preg_match('/[^A-Za-z0-9-_.]/', $_POST['dropbox_location'])) {
+		if (preg_match('/[^A-Za-z0-9-_.\/]/', $_POST['dropbox_location'])) {
 			$error_msg = __('The sub directory must only contain alphanumeric characters.', 'wpbtd');
 			$dropbox_location = $_POST['dropbox_location'];
 			$store_in_subfolder = true;
@@ -66,10 +66,6 @@ try {
 		$dropbox_location = $config->get_option('dropbox_location');
 		$store_in_subfolder = $config->get_option('store_in_subfolder');
 	}
-
-	$backup
-		->create_dump_dir()
-		->create_silence_file();
 
 	$time = date('H:i', $unixtime);
 	$day = date('D', $unixtime);
@@ -145,26 +141,6 @@ try {
 <h2><?php _e('WordPress Backup to Dropbox', 'wpbtd'); ?></h2>
 <p class="description"><?php printf(__('Version %s', 'wpbtd'), BACKUP_TO_DROPBOX_VERSION) ?></p>
 	<?php if ($dropbox->is_authorized()) {
-
-		if (ini_get('safe_mode') && ini_get('max_execution_time') != 0): ?>
-			<p>
-				<h3><?php _e('Safe Mode Warning') ?></h3>
-				<p><?php echo sprintf(
-					__("%sSafe mode%s is enabled on your server so the PHP time and memory limits cannot be set by the backup process.
-					Your time limit is %s seconds and your memory limit is %s, so if your backup fails it's highly probable that
-					these settings are too low. Each host has different methods available to increase these settings and a quick Google search should
-					yield some information. If not, please contact your host or search the plugins %sforum%s for help.
-					If you cannot find an answer, please feel free to post a new topic for the community to respond to.", 'wpbtd'),
-					'<a href="http://php.net/manual/en/features.safe-mode.php">',
-					'</a>',
-					ini_get('max_execution_time'),
-					ini_get('memory_limit'),
-					'<a href="http://wordpress.org/support/plugin/wordpress-backup-to-dropbox">',
-					'</a>');
-				?>
-			</p>
-		<?php endif;
-
 		$account_info = $dropbox->get_account_info();
 		$used = round(($account_info->quota_info->quota - ($account_info->quota_info->normal + $account_info->quota_info->shared)) / 1073741824, 1);
 		$quota = round($account_info->quota_info->quota / 1073741824, 1);

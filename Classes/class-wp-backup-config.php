@@ -75,10 +75,6 @@ class WP_Backup_Config {
 		return isset($options[$option]) ? $options[$option] : false;
 	}
 
-	public function get_log() {
-		return get_option('backup-to-dropbox-log');
-	}
-
 	public function get_actions() {
 		return get_option('backup-to-dropbox-actions');
 	}
@@ -163,6 +159,19 @@ class WP_Backup_Config {
 		return get_option('backup-to-dropbox-history');
 	}
 
+	public function get_dropbox_path($source, $file, $root = false) {
+		$dropbox_location = null;
+		if ($this->get_option('store_in_subfolder'))
+			$dropbox_location = $this->get_option('dropbox_location');
+
+		if ($root)
+			return $dropbox_location;
+
+		$source = rtrim($source, DIRECTORY_SEPARATOR);
+
+		return ltrim(dirname(str_replace($source, $dropbox_location, $file)), DIRECTORY_SEPARATOR);
+	}
+
 	public function log_finished_time() {
 		$history = $this->get_history();
 		$history[] = time();
@@ -183,27 +192,7 @@ class WP_Backup_Config {
 
 		$this->set_option('in_progress', false);
 		$this->set_option('is_running', false);
-		return $this;
-	}
 
-	public function clear_log() {
-		update_option('backup-to-dropbox-log', array());
-		return $this;
-	}
-
-	public function log_error($msg) {
-		return $this->log($msg, null, true);
-	}
-
-	public function log($msg, $files = null, $error = false) {
-		$log = get_option('backup-to-dropbox-log');
-		$log[] = array(
-			'time' => strtotime(current_time('mysql')),
-			'message' => $msg,
-			'files' => json_encode($files),
-			'error' => $error,
-		);
-		update_option('backup-to-dropbox-log', $log);
 		return $this;
 	}
 }
