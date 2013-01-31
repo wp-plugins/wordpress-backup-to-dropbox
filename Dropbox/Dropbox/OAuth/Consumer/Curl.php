@@ -84,6 +84,11 @@ class OAuth_Consumer_Curl extends OAuth_Consumer_ConsumerAbstract
 
         // Execute and parse the response
         $response = curl_exec($handle);
+
+        //Check if a curl error has occured
+        if ($response === false)
+            throw new Exception("Error Processing Request: " . curl_error($handle));
+
         curl_close($handle);
 
         // Parse the response if it is a string
@@ -91,7 +96,7 @@ class OAuth_Consumer_Curl extends OAuth_Consumer_ConsumerAbstract
             $response = $this->parse($response);
         }
 
-        // Check if an error occurred and throw an Exception
+        // Check if a Dropbox error occurred
         if (!empty($response['body']->error)) {
             $message = $response['body']->error . ' (Status Code: ' . $response['code'] . ')';
             throw new Exception($message);
