@@ -189,6 +189,15 @@ abstract class OAuth_Consumer_ConsumerAbstract
         return $this;
     }
 
+    public function resetToken() {
+        $token = new stdClass;
+        $token->oauth_token = false;
+        $token->oauth_token_secret = false;
+
+        $this->setToken($token);
+        return $this;
+    }
+
     /**
      * Set the OAuth signature method
      * @param string $method Either PLAINTEXT or HMAC-SHA1

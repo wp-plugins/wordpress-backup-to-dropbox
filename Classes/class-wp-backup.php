@@ -62,8 +62,11 @@ class WP_Backup {
 					}
 
 					$percent_done = __('unknown', 'wpbtd');
-					if ($total_files > 0)
+					if ($total_files > 0) {
 						$percent_done = round(($processed_file_count / $total_files) * 100, 0);
+						if ($percent_done > 99)
+							$percent_done = 99;
+					}
 
 					$this->config->add_processed_files($current_processed_files);
 
@@ -188,7 +191,7 @@ class WP_Backup {
 				throw new Exception(
 					sprintf(
 						__("WordPress does not have write access to '%s'. Please grant it write privileges before using this plugin."),
-						$this->config->get_backup_dir()
+						WP_Backup_Config::get_backup_dir()
 					)
 				);
 			}
