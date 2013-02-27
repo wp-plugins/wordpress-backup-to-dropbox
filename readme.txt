@@ -97,7 +97,7 @@ To diagnose issues with your plugin please refer to this [sticky topic](http://w
 
 = How do I restore my website? =
 
-Simply download [WPB2D Simple Restore](http://wpb2d.com/restore) and upload it to an empty host. Once uploaded you will be guided through a wizard of 5 easy steps and have your blog restored in no time.
+Simply download [WPB2D Simple Restore](http://wpb2d.com/simple-restore) and upload it to an empty host. Once uploaded you will be guided through a wizard of 5 easy steps and have your blog restored in no time.
 
 You don’t even have to install WordPress!
 
