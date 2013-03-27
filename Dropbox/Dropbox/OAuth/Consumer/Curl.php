@@ -14,8 +14,8 @@ class OAuth_Consumer_Curl extends OAuth_Consumer_ConsumerAbstract
      * Default cURL options
      * @var array
      */
-    private $defaultOptions = array(
-        CURLOPT_SSL_VERIFYPEER => false,
+    protected $defaultOptions = array(
+        CURLOPT_SSL_VERIFYPEER => true,
         CURLOPT_VERBOSE        => true,
         CURLOPT_HEADER         => true,
         CURLINFO_HEADER_OUT    => false,
@@ -24,11 +24,15 @@ class OAuth_Consumer_Curl extends OAuth_Consumer_ConsumerAbstract
     );
 
     /**
+     * Store the last response form the API
+     * @var mixed
+     */
+    protected $lastResponse = null;
+
+   /**
      * Set properties and begin authentication
      * @param string $key
      * @param string $secret
-     * @param $storage
-     * @param string $callback
      */
     public function __construct($key, $secret)
     {
@@ -60,6 +64,7 @@ class OAuth_Consumer_Curl extends OAuth_Consumer_ConsumerAbstract
 
         // Get the default options array
         $options = $this->defaultOptions;
+        $options[CURLOPT_CAINFO] = dirname(__FILE__) . '/ca-bundle.pem';
 
         if ($method == 'GET' && $this->outFile) { // GET
             $options[CURLOPT_RETURNTRANSFER] = false;
@@ -96,10 +101,19 @@ class OAuth_Consumer_Curl extends OAuth_Consumer_ConsumerAbstract
             $response = $this->parse($response);
         }
 
-        // Check if a Dropbox error occurred
+        // Set the last response
+        $this->lastResponse = $response;
+
+        // Check if an error occurred and throw an Exception
         if (!empty($response['body']->error)) {
-            $message = $response['body']->error . ' (Status Code: ' . $response['code'] . ')';
-            throw new Exception($message);
+        	// Dropbox returns error messages inconsistently...
+        	if ($response['body']->error instanceof stdClass) {
+        		$array = array_values((array) $response['body']->error);
+        		$response['body']->error = $array[0];
+        	}
+
+        	// Throw an Exception with the appropriate with the appropriate code
+            throw new Exception($response['body']->error, $response['code']);
         }
 
         return $response;
@@ -145,5 +159,14 @@ class OAuth_Consumer_Curl extends OAuth_Consumer_ConsumerAbstract
         }
 
         return array('code' => $code, 'body' => $body, 'headers' => $headers);
+    }
+
+    /**
+     * Return the response for the last API request
+     * @return mixed
+     */
+    public function getlastResponse()
+    {
+    	return $this->lastResponse;
     }
 }
