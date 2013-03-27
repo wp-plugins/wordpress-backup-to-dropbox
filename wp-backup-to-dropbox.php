@@ -3,7 +3,7 @@
 Plugin Name: WordPress Backup to Dropbox
 Plugin URI: http://wpb2d.com
 Description: Keep your valuable WordPress website, its media and database backed up to Dropbox in minutes with this sleek, easy to use plugin.
-Version: 1.4.4
+Version: 1.4.5
 Author: Michael De Wildt
 Author URI: http://www.mikeyd.com.au
 License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
@@ -21,7 +21,7 @@ License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
 		along with this program; if not, write to the Free Software
 		Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-define('BACKUP_TO_DROPBOX_VERSION', '1.4.4');
+define('BACKUP_TO_DROPBOX_VERSION', '1.4.5');
 define('EXTENSIONS_DIR', implode(array(WP_CONTENT_DIR, 'plugins', 'wordpress-backup-to-dropbox', 'Extensions'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR);
 define('CHUNKED_UPLOAD_THREASHOLD', 10485760); //10 MB
 define('MINUMUM_PHP_VERSION', 50216); //5.2.16
@@ -234,6 +234,15 @@ function backup_to_dropbox_cron_schedules($schedules) {
 	return array_merge($schedules, $new_schedules);
 }
 
+function get_blog_root_dir() {
+	$home = get_option('home');
+	$site_url = get_option('siteurl');
+	if ($siteurl != null && $home != $siteurl)
+		return preg_replace(str_replace($home, '', $site_url) . '\/$/', "", ABSPATH);
+
+	return ABSPATH;
+}
+
 //Delete unused options from previous versions
 delete_option('backup-to-dropbox-actions');
 delete_option('backup-to-dropbox-file-list');
@@ -245,9 +254,28 @@ add_action('monitor_dropbox_backup_hook', 'monitor_dropbox_backup');
 add_action('run_dropbox_backup_hook', 'run_dropbox_backup');
 add_action('execute_periodic_drobox_backup', 'execute_drobox_backup');
 add_action('execute_instant_drobox_backup', 'execute_drobox_backup');
-add_action('admin_menu', 'backup_to_dropbox_admin_menu');
 add_action('wp_ajax_file_tree', 'backup_to_dropbox_file_tree');
 add_action('wp_ajax_progress', 'backup_to_dropbox_progress');
 
 //i18n language text domain
 load_plugin_textdomain('wpbtd', true, 'wordpress-backup-to-dropbox/Languages/');
+
+if (defined('MULTISITE') && MULTISITE) {
+	function custom_menu_order($menu_ord) {
+		if (!$menu_ord)
+			return true;
+
+		if (in_array('backup-to-dropbox', $menu_ord))
+			$menu_ord[] = array_shift($menu_ord);
+
+		return $menu_ord;
+	}
+
+	add_filter('custom_menu_order', 'custom_menu_order');
+	add_filter('menu_order', 'custom_menu_order');
+
+	add_action('network_admin_menu', 'backup_to_dropbox_admin_menu');
+} else {
+	add_action('admin_menu', 'backup_to_dropbox_admin_menu');
+}
+

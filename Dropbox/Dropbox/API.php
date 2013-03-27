@@ -497,12 +497,13 @@ class API
     /**
      * Trim the path of forward slashes and replace
      * consecutive forward slashes with a single slash
+     * then replace backslashes with forward slashes
      * @param string $path The path to normalise
      * @return string
      */
     private function normalisePath($path)
     {
-        return preg_replace('#/+#', '/', trim($path, '/'));
+        return str_replace('\\', '/', preg_replace('#/+#', '/', trim($path, '/')));
     }
 
     /**
