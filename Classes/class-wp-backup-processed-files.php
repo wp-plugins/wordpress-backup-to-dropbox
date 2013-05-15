@@ -1,5 +1,7 @@
 <?php
 /**
+ * A class with functions the perform a backup of WordPress
+ *
  * @copyright Copyright (C) 2011-2012 Michael De Wildt. All rights reserved.
  * @author Michael De Wildt (http://www.mikeyd.com.au/)
  * @license This program is free software; you can redistribute it and/or modify
@@ -16,42 +18,47 @@
  *          along with this program; if not, write to the Free Software
  *          Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110, USA.
  */
-abstract class WP_Backup_Extension {
-	const TYPE_DEFAULT = 1;
-	const TYPE_OUTPUT = 2;
+class WP_Backup_Processed_Files {
 
-	protected
-		$dropbox,
-		$dropbox_path,
-		$config
+	private
+		$db,
+		$processed_files
 		;
 
-	private	$chunked_upload_threashold;
-
 	public function __construct() {
-		$this->dropbox = WP_Backup_Registry::dropbox();
-		$this->config  = WP_Backup_Registry::config();
+		$this->db = WP_Backup_Registry::db();
 	}
 
-	public function set_chunked_upload_threashold($threashold) {
-		$this->chunked_upload_threashold = $threashold;
+	public function get_file_count() {
+		return count($this->get_files());
+	}
+
+	public function get_file($file_name) {
+		foreach ($this->get_files() as $file) {
+			if ($file->file == $file_name)
+				return $file;
+		}
+	}
+
+	public function add_files($new_files) {
+		foreach ($new_files as $file) {
+
+			$file_details = new stdClass;
+			$file_details->file = $file;
+
+			$this->processed_files[] = $file_details;
+			$this->db->insert($this->db->prefix . 'wpb2d_processed_files', array(
+				'file' => $file
+			));
+		}
 
 		return $this;
 	}
 
-	public function get_chunked_upload_threashold() {
-		if ($this->chunked_upload_threashold !== null)
-			return $this->chunked_upload_threashold;
+	private function get_files() {
+		if (!$this->processed_files)
+			$this->processed_files = $this->db->get_results("SELECT * FROM {$this->db->prefix}wpb2d_processed_files");
 
-		return CHUNKED_UPLOAD_THREASHOLD;
+		return $this->processed_files;
 	}
-
-	abstract function complete();
-	abstract function failure();
-
-	abstract function get_menu();
-	abstract function get_type();
-
-	abstract function is_enabled();
-	abstract function set_enabled($bool);
 }

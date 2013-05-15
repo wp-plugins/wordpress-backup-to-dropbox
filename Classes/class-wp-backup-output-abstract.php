@@ -16,42 +16,22 @@
  *          along with this program; if not, write to the Free Software
  *          Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110, USA.
  */
-abstract class WP_Backup_Extension {
-	const TYPE_DEFAULT = 1;
-	const TYPE_OUTPUT = 2;
-
+abstract class WP_Backup_Base_Output {
 	protected
 		$dropbox,
 		$dropbox_path,
 		$config
 		;
 
-	private	$chunked_upload_threashold;
-
-	public function __construct() {
-		$this->dropbox = WP_Backup_Registry::dropbox();
-		$this->config  = WP_Backup_Registry::config();
-	}
-
-	public function set_chunked_upload_threashold($threashold) {
-		$this->chunked_upload_threashold = $threashold;
+	public function set_dropbox_api($dropbox) {
+		$this->dropbox = $dropbox;
 
 		return $this;
 	}
 
-	public function get_chunked_upload_threashold() {
-		if ($this->chunked_upload_threashold !== null)
-			return $this->chunked_upload_threashold;
+	public function set_config($config) {
+		$this->config = $config;
 
-		return CHUNKED_UPLOAD_THREASHOLD;
+		return $this;
 	}
-
-	abstract function complete();
-	abstract function failure();
-
-	abstract function get_menu();
-	abstract function get_type();
-
-	abstract function is_enabled();
-	abstract function set_enabled($bool);
 }

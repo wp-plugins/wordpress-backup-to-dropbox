@@ -23,8 +23,9 @@ try {
 
 	$validation_errors = null;
 
-	$dropbox = Dropbox_Facade::construct();
-	$config = WP_Backup_Config::construct();
+	$dropbox = WP_Backup_Registry::dropbox();
+	$config = WP_Backup_Registry::config();
+
 	$backup = new WP_Backup();
 
 	$backup->create_dump_dir();
@@ -86,7 +87,7 @@ try {
 
 		//Display the file tree with a call back to update the clicked on check box and white list
 		$('#file_tree').fileTree({
-			root: '<?php echo addslashes(get_blog_root_dir()); ?>',
+			root: '<?php echo addslashes(ABSPATH); ?>',
 			script: ajaxurl,
 			expandSpeed: 500,
 			collapseSpeed: 500,
@@ -360,9 +361,9 @@ try {
 	<form id="backup_to_dropbox_continue" name="backup_to_dropbox_continue"
 		  action="options-general.php?page=backup-to-dropbox" method="post">
 		<input type="button" name="authorize" id="authorize" value="<?php _e('Authorize', 'wpbtd'); ?>"
-			   onclick="dropbox_authorize('<?php echo $url ?>')"/><br/>
+			   class="button-primary" onclick="dropbox_authorize('<?php echo $url ?>')"/><br/>
 		<input style="visibility: hidden;" type="submit" name="continue" id="continue"
-			   value="<?php _e('Continue', 'wpbtd'); ?>"/>
+			   class="button-primary" value="<?php _e('Continue', 'wpbtd'); ?>"/>
 	</form>
 	</p>
 		<?php

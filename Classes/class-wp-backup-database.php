@@ -30,37 +30,45 @@ abstract class WP_Backup_Database {
 
 	abstract function execute();
 
-	public function __construct($type, $wpdb = null) {
-		if (!$wpdb) global $wpdb;
-
-		WP_Backup::create_dump_dir();
-
+	public function __construct($type) {
 		$this->type = $type;
-		$this->database = $wpdb;
-		$this->config = WP_Backup_Config::construct();
+		$this->database = WP_Backup_Registry::db();
+		$this->config = WP_Backup_Registry::config();
 
 		$this->set_wait_timeout();
 	}
 
 	public function remove_file() {
-		$sql_file_name = $this->get_file();
-		if (file_exists($sql_file_name))
-			unlink($sql_file_name);
+		foreach (glob($this->get_file(false) . '*') as $file)
+			unlink($file);
 	}
 
 	private function set_wait_timeout() {
 		$this->database->query("SET SESSION wait_timeout=" . self::WAIT_TIMEOUT);
 	}
 
-	public function get_file() {
+	public function get_file($secret = true) {
 		if (!$this->type)
 			throw new Exception();
 
-		return rtrim($this->config->get_backup_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . DB_NAME . "-backup-{$this->type}.sql";
+		$file = rtrim($this->config->get_backup_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . DB_NAME . "-backup-{$this->type}.sql";
+
+		$files = glob($file . '*');
+		if ($files) {
+			foreach ($files as $file) {
+				if (preg_match('/(.?)' . preg_quote("-backup-{$this->type}.sql") . '(.?)/', $file))
+					return $file;
+			}
+		}
+
+		if ($secret)
+			$file .= '.' . hash_hmac('sha1', DB_NAME, time()) . '-wpb2d-secret';
+
+		return $file;
 	}
 
 	protected function exists() {
-		return file_exists($this->get_file());
+		return count(glob($this->get_file(false) . '*')) > 0;
 	}
 
 	protected function write_db_dump_header() {
@@ -72,7 +80,7 @@ abstract class WP_Backup_Database {
 
 		if (!is_writable($dump_location)) {
 			$msg = sprintf(__("A database backup cannot be created because WordPress does not have write access to '%s', please ensure this directory has write access.", 'wpbtd'), $dump_location);
-			WP_Backup_Logger::log($msg);
+			WP_Backup_Registry::logger()->log($msg);
 			return false;
 		}
 

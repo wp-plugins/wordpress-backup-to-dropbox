@@ -18,43 +18,71 @@
  *          along with this program; if not, write to the Free Software
  *          Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110, USA.
  */
-class WP_Backup_Output {
+class WP_Backup_Output extends WP_Backup_Extension {
 
 	const MAX_ERRORS = 10;
 
-	private $dropbox;
-	private $config;
-	private $last_backup_time;
-	private $error_count;
+	private
+		$error_count,
+		$root
+		;
 
-	public function __construct($dropbox = false, $config = false) {
-		$this->dropbox = $dropbox ? $dropbox : Dropbox_Facade::construct();
-		$this->config = $config ? $config : WP_Backup_Config::construct();
-		$this->last_backup_time = array_pop($this->config->get_history());
+	public function set_root($root) {
+		$this->root = $root;
+
+		return $this;
 	}
 
-	public function out($source, $file, $root = false) {
-
-		if ($this->error_count > self::MAX_ERRORS) {
+	public function out($source, $file, $processed_file = null) {
+		if ($this->error_count > self::MAX_ERRORS)
 			throw new Exception(sprintf(__('The backup is having trouble uploading files to Dropbox, it has failed %s times and is aborting the backup.'), self::MAX_ERRORS));
-		}
 
-		$dropbox_path = $this->config->get_dropbox_path($source, $file, $root);
+		if (!$this->dropbox)
+			throw new Exception(__("Dropbox API not set"));
+
+		$dropbox_path = $this->config->get_dropbox_path($source, $file, $this->root);
 
 		try {
 			$directory_contents = $this->dropbox->get_directory_contents($dropbox_path);
-			if (!in_array(basename($file), $directory_contents) || filemtime($file) > $this->last_backup_time) {
-				if (filesize($file) > CHUNKED_UPLOAD_THREASHOLD)
-					return $this->dropbox->chunk_upload_file($dropbox_path, $file);
-				else
+
+			if (!in_array(basename($file), $directory_contents) || filemtime($file) > $this->config->get_option('last_backup_time')) {
+				$file_size = filesize($file);
+				if ($file_size > $this->get_chunked_upload_threashold()) {
+
+					if ($processed_file) {
+						$uploading = __("Uploading large file '%s' (%sMB) in chunks", 'wpbtd');
+						$resuming = __("Resuming upload of large file '%s'", 'wpbtd');
+
+						WP_Backup_Registry::logger()->log(sprintf(
+							$processed_file->offset < 1 ? $uploading : $resuming,
+							basename($file),
+							round($file_size / 1048576, 1)
+						));
+					}
+
+					return $this->dropbox->chunk_upload_file($dropbox_path, $file, $processed_file);
+				} else {
 					return $this->dropbox->upload_file($dropbox_path, $file);
+				}
 			}
 
 		} catch (Exception $e) {
-			WP_Backup_Logger::log(sprintf(__("Error uploading '%s' to Dropbox: %s", 'wpbtd'), $file, strip_tags($e->getMessage())));
+			WP_Backup_Registry::logger()->log(sprintf(__("Error uploading '%s' to Dropbox: %s", 'wpbtd'), $file, strip_tags($e->getMessage())));
 			$this->error_count++;
 		}
 	}
 
+	public function start() {
+		return true;
+	}
+
 	public function end() {}
+	public function complete() {}
+	public function failure() {}
+
+	public function get_menu() {}
+	public function get_type() {}
+
+	public function is_enabled() {}
+	public function set_enabled($bool) {}
 }

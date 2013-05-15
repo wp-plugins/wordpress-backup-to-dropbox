@@ -21,75 +21,44 @@
 class WP_Backup_Config {
 	const MAX_HISTORY_ITEMS = 20;
 
-	public static function construct() {
-		return new self();
-	}
+	private
+		$db,
+		$options
+		;
 
 	public function __construct() {
-		if (!is_array(get_option('backup-to-dropbox-log'))) {
-			add_option('backup-to-dropbox-log', array(), null, 'no');
-		}
-
-		if (!is_array(get_option('backup-to-dropbox-history'))) {
-			add_option('backup-to-dropbox-history', array(), null, 'no');
-		}
-
-		$options = get_option('backup-to-dropbox-options');
-		if (!$options) {
-			$options = array(
-				'dropbox_location' => null,
-				'in_progress' => false,
-				'store_in_subfolder' => false,
-				'total_file_count' => 0,
-			);
-			add_option('backup-to-dropbox-options', $options, null, 'no');
-		}
-
-		$actions = get_option('backup-to-dropbox-actions');
-		if (!$actions) {
-			add_option('backup-to-dropbox-actions', array(), null, 'no');
-		}
-
-		$files = get_option('backup-to-dropbox-processed-files');
-		if (!$files) {
-			add_option('backup-to-dropbox-processed-files', array(), null, 'no');
-		}
+		$this->db = WP_Backup_Registry::db();
 	}
 
 	public static function get_backup_dir() {
-		return WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'backups';
+		return str_replace(DIRECTORY_SEPARATOR, '/', WP_CONTENT_DIR . '/backups/');
 	}
 
-	public function set_option($option, $value) {
-		$options = get_option('backup-to-dropbox-options');
-		$options[$option] = $value;
-		update_option('backup-to-dropbox-options', $options);
+	public function set_option($name, $value) {
+		$this->options[$name] = $value;
+
+		$result = $this->db->insert($this->db->prefix . "wpb2d_options", array(
+			'name' => $name,
+			'value' => $value,
+		));
+
+		if (!$result) {
+			$this->db->update(
+				$this->db->prefix . 'wpb2d_options',
+				array('value' => $value),
+				array('name' => $name)
+			);
+		}
+
 		return $this;
 	}
 
-	public function get_option($option, $no_cache = false) {
-		if ($no_cache)
-			wp_cache_flush();
+	public function get_option($name) {
+		if (!isset($this->options[$name])) {
+			$this->options[$name] = $this->db->get_var("SELECT value FROM {$this->db->prefix}wpb2d_options WHERE name = '$name'");
+		}
 
-		$options = get_option('backup-to-dropbox-options');
-		return isset($options[$option]) ? $options[$option] : false;
-	}
-
-	public function get_actions() {
-		return get_option('backup-to-dropbox-actions');
-	}
-
-	public function get_processed_files() {
-		return get_option('backup-to-dropbox-processed-files');
-	}
-
-	public function add_processed_files($new_files) {
-		$files = $this->get_processed_files();
-		if (!is_array($files))
-			$files = array();
-
-		update_option('backup-to-dropbox-processed-files', array_merge($files, $new_files));
-		return $this;
+		return $this->options[$name];
 	}
 
 	public static function set_time_limit() {
@@ -141,21 +110,28 @@ class WP_Backup_Config {
 	public function get_schedule() {
 		$time = wp_next_scheduled('execute_periodic_drobox_backup');
 		$frequency = wp_get_schedule('execute_periodic_drobox_backup');
+		$schedule = null;
+
 		if ($time && $frequency) {
 			//Convert the time to the blogs timezone
 			$blog_time = strtotime(date('Y-m-d H', strtotime(current_time('mysql'))) . ':00:00');
 			$blog_time += $time - strtotime(date('Y-m-d H') . ':00:00');
 			$schedule = array($blog_time, $frequency);
 		}
+
 		return $schedule;
 	}
 
 	public function clear_history() {
-		update_option('backup-to-dropbox-history', array());
+		$this->set_option('history', null);
 	}
 
 	public function get_history() {
-		return get_option('backup-to-dropbox-history');
+		$history = $this->get_option('history');
+		if (!$history)
+			return array();
+
+		return explode(',', $history);
 	}
 
 	public function get_dropbox_path($source, $file, $root = false) {
@@ -178,7 +154,8 @@ class WP_Backup_Config {
 		if (count($history) > self::MAX_HISTORY_ITEMS)
 			array_shift($history);
 
-		update_option('backup-to-dropbox-history', $history);
+		$this->set_option('history', implode(',', $history));
+
 		return $this;
 	}
 
@@ -187,11 +164,20 @@ class WP_Backup_Config {
 		wp_clear_scheduled_hook('run_dropbox_backup_hook');
 		wp_clear_scheduled_hook('execute_instant_drobox_backup');
 
-		update_option('backup-to-dropbox-processed-files', array());
+		$this->db->query("TRUNCATE {$this->db->prefix}wpb2d_processed_files");
 
 		$this->set_option('in_progress', false);
 		$this->set_option('is_running', false);
 
 		return $this;
+	}
+
+	public function die_if_stopped() {
+		$in_progress = $this->db->get_var("SELECT value FROM {$this->db->prefix}wpb2d_options WHERE name = 'in_progress'");
+		if (!$in_progress) {
+			$msg = __('Backup stopped by user.', 'wpbtd');
+			WP_Backup_Registry::logger()->log($msg);
+			die($msg);
+		}
 	}
 }

@@ -1,5 +1,7 @@
 <?php
 /**
+ * A class with functions the perform a backup of WordPress
+ *
  * @copyright Copyright (C) 2011-2012 Michael De Wildt. All rights reserved.
  * @author Michael De Wildt (http://www.mikeyd.com.au/)
  * @license This program is free software; you can redistribute it and/or modify
@@ -16,42 +18,35 @@
  *          along with this program; if not, write to the Free Software
  *          Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110, USA.
  */
-abstract class WP_Backup_Extension {
-	const TYPE_DEFAULT = 1;
-	const TYPE_OUTPUT = 2;
+class WP_Backup_Upload_Tracker {
 
-	protected
-		$dropbox,
-		$dropbox_path,
-		$config
-		;
-
-	private	$chunked_upload_threashold;
+	private $db;
 
 	public function __construct() {
-		$this->dropbox = WP_Backup_Registry::dropbox();
-		$this->config  = WP_Backup_Registry::config();
+		$this->db = WP_Backup_Registry::db();
 	}
 
-	public function set_chunked_upload_threashold($threashold) {
-		$this->chunked_upload_threashold = $threashold;
+	public function track_upload($file, $upload_id, $offset) {
+		WP_Backup_Registry::config()->die_if_stopped();
 
-		return $this;
+		WP_Backup_Registry::logger()->log(sprintf(
+			__("Uploaded %sMB of %sMB", 'wpbtd'),
+			round($offset / 1048576, 1),
+			round(filesize($file) / 1048576, 1)
+		));
+
+		$result = $this->db->insert("{$this->db->prefix}wpb2d_processed_files", array(
+			'file' => $file,
+			'uploadid' => $upload_id,
+			'offset' => $offset
+		));
+
+		if (!$result) {
+			$this->db->update(
+				"{$this->db->prefix}wpb2d_processed_files",
+				array('uploadid' => $upload_id, 'offset' => $offset),
+				array('file' => $file)
+			);
+		}
 	}
-
-	public function get_chunked_upload_threashold() {
-		if ($this->chunked_upload_threashold !== null)
-			return $this->chunked_upload_threashold;
-
-		return CHUNKED_UPLOAD_THREASHOLD;
-	}
-
-	abstract function complete();
-	abstract function failure();
-
-	abstract function get_menu();
-	abstract function get_type();
-
-	abstract function is_enabled();
-	abstract function set_enabled($bool);
 }

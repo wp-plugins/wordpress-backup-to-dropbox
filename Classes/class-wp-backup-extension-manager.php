@@ -19,7 +19,9 @@
 class WP_Backup_Extension_Manager {
 	private
 		$key = 'c7d97d59e0af29b2b2aa3ca17c695f96',
-		$objectCache
+		$objectCache,
+		$installed,
+		$db
 		;
 
 	public static function construct() {
@@ -27,8 +29,7 @@ class WP_Backup_Extension_Manager {
 	}
 
 	public function __construct() {
-		if (!get_option('backup-to-dropbox-premium-extensions'))
-			add_option('backup-to-dropbox-premium-extensions', array(), null, 'no');
+		$this->db = WP_Backup_Registry::db();
 	}
 
 	public function get_key() {
@@ -64,16 +65,17 @@ class WP_Backup_Extension_Manager {
 	}
 
 	public function get_installed() {
-		$extensions = get_option('backup-to-dropbox-premium-extensions');
-		if (!is_array($extensions))
-			return array();
+		if (!$this->installed) {
+			$this->installed = $this->db->get_results("SELECT * FROM {$this->db->prefix}wpb2d_premium_extensions");
 
-		return $extensions;
+			if (!is_array($this->installed))
+				return array();
+		}
+
+		return $this->installed;
 	}
 
 	public function install($name, $file) {
-		@umask(0000);
-
 		if (!defined('FS_METHOD'))
 			define('FS_METHOD', 'direct');
 
@@ -109,67 +111,64 @@ class WP_Backup_Extension_Manager {
 	}
 
 	public function activate($name, $file) {
-		$extensions = get_option('backup-to-dropbox-premium-extensions');
-		$extensions[$name] = $file;
-		update_option('backup-to-dropbox-premium-extensions', $extensions);
+		$this->db->insert($this->db->prefix . "wpb2d_premium_extensions", array(
+			'name' => $name,
+			'file' => $file,
+		));
 	}
 
 	public function init() {
 		$installed = $this->get_installed();
 		$active = array();
-		foreach ($installed as $name => $file) {
-			if (file_exists(EXTENSIONS_DIR . $file)) {
-				include_once EXTENSIONS_DIR . $file;
-				$active[$name] = $file;
+		foreach ($installed as $extension) {
+			if (file_exists(EXTENSIONS_DIR . $extension->file)) {
+
+				include_once EXTENSIONS_DIR . $extension->file;
+				$this->activate($extension->name, $extension->file);
 			}
 
 		}
-		update_option('backup-to-dropbox-premium-extensions', $active);
 	}
 
 	public function get_output() {
 		$installed = $this->get_installed();
-		foreach ($installed as $name => $file) {
-			$obj = $this->get_instance($name);
+		foreach ($installed as $extension) {
+			$obj = $this->get_instance($extension->name);
 			if ($obj && $obj->get_type() == WP_Backup_Extension::TYPE_OUTPUT && $obj->is_enabled())
 				return $obj;
 		}
-		return new WP_Backup_Output();
+		return $this->get_instance('WP_Backup_Output');
 	}
 
 	public function add_menu_items() {
-		$installed = $this->get_installed();
-		foreach ($installed as $name => $file)
-			$this->get_instance($name)->get_menu();
+		return $this->call('get_menu', false);
 	}
 
-	private function call($func) {
+	public function complete() {
+		$this->call('complete');
+	}
+
+	public function failure() {
+		$this->call('failure');
+	}
+
+	private function call($func, $check_enabled = true) {
 		$installed = $this->get_installed();
-		foreach ($installed as $name => $file) {
-			$obj = $this->get_instance($name);
-			if ($obj->is_enabled())
+		foreach ($installed as $extension) {
+			$obj = $this->get_instance($extension->name);
+			if ($obj && ($check_enabled == false || $obj->is_enabled()))
 				$obj->$func();
 		}
-	}
-
-	public function on_start() {
-		$this->call('on_start');
-	}
-
-	public function on_complete() {
-		$this->call('on_complete');
-	}
-
-	public function on_failure() {
-		$this->call('on_failure');
 	}
 
 	private function get_instance($name) {
 		$class = str_replace(' ', '_', ucwords($name));
 
 		if (!isset($this->objectCache[$class])) {
-			if (class_exists($class))
-				 $this->objectCache[$class] = new $class();
+			if (!class_exists($class))
+				return false;
+
+			$this->objectCache[$class] = new $class();
 		}
 
 		return $this->objectCache[$class];
