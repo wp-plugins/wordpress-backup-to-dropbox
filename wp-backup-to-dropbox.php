@@ -334,11 +334,22 @@ function wpb2d_install_data() {
 	delete_option('backup-to-dropbox-actions');
 	delete_option('backup-to-dropbox-file-list');
 	delete_option('backup-to-dropbox-log');
+
+	set_option('wpb2d_active_version', BACKUP_TO_DROPBOX_VERSION);
 }
 
 //Register database install
 register_activation_hook(__FILE__, 'wpb2d_install');
 register_activation_hook(__FILE__, 'wpb2d_install_data');
+
+function wpb2d_upgrade_plugin() {
+	if (get_option('wpb2d_active_version') != BACKUP_TO_DROPBOX_VERSION) {
+		wpb2d_install();
+		wpb2d_install_data();
+	}
+}
+
+add_action('admin_init', 'wpb2d_upgrade_plugin');
 
 //WordPress filters and actions
 add_filter('cron_schedules', 'backup_to_dropbox_cron_schedules');
