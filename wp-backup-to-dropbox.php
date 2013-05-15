@@ -335,7 +335,7 @@ function wpb2d_install_data() {
 	delete_option('backup-to-dropbox-file-list');
 	delete_option('backup-to-dropbox-log');
 
-	set_option('wpb2d_active_version', BACKUP_TO_DROPBOX_VERSION);
+	add_option('wpb2d_active_version', BACKUP_TO_DROPBOX_VERSION);
 }
 
 //Register database install
