@@ -54,11 +54,7 @@ class Dropbox_Facade {
 		$this->request_token = $this->get_token('request');
 		$this->access_token = $this->get_token('access');
 
-
-			//If we don't have an acess token then lets setup a new request
-		if (!$this->oauth_state) {
-			$this->request();
-		} else if ($this->oauth_state == 'request') {
+		if ($this->oauth_state == 'request') {
 			//If we have not got an access token then we need to grab one
 			try {
 				$this->oauth->setToken($this->request_token);
@@ -69,8 +65,11 @@ class Dropbox_Facade {
 				//Authorization failed so we are still pending
 				$this->unlink_account();
 			}
-		} else {
+		} else if ($this->oauth_state == 'access')  {
 			$this->oauth->setToken($this->access_token);
+		} else {
+			//If we don't have an acess token then lets setup a new request
+			$this->request();
 		}
 
 		$this->save_tokens();
@@ -83,7 +82,10 @@ class Dropbox_Facade {
 		$token = $this->config->get_option("{$type}_token");
 		$token_secret = $this->config->get_option("{$type}_token_secret");
 
-		$ret = null;
+		$ret = new stdClass;
+		$ret->oauth_token = null;
+		$ret->oauth_token_secret = null;
+
 		if ($token && $token_secret) {
 			$ret = new stdClass;
 			$ret->oauth_token = $token;
