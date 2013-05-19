@@ -3,7 +3,7 @@
 Plugin Name: WordPress Backup to Dropbox
 Plugin URI: http://wpb2d.com
 Description: Keep your valuable WordPress website, its media and database backed up to Dropbox in minutes with this sleek, easy to use plugin.
-Version: 1.5.2
+Version: 1.5.3
 Author: Michael De Wildt
 Author URI: http://www.mikeyd.com.au
 License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
@@ -21,7 +21,7 @@ License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
 		along with this program; if not, write to the Free Software
 		Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-define('BACKUP_TO_DROPBOX_VERSION', '1.5.2');
+define('BACKUP_TO_DROPBOX_VERSION', '1.5.3');
 define('BACKUP_TO_DROPBOX_DATABASE_VERSION', '1');
 
 define('EXTENSIONS_DIR', str_replace(DIRECTORY_SEPARATOR, '/', WP_CONTENT_DIR . '/plugins/wordpress-backup-to-dropbox/Extensions/'));
@@ -76,6 +76,12 @@ function wpb2d_autoload($class_name) {
 	}
 }
 
+function wpb2d_style() {
+	//Register stylesheet
+	wp_register_style('wpb2d-style', plugins_url('wp-backup-to-dropbox.css', __FILE__) );
+	wp_enqueue_style('wpb2d-style');
+}
+
 /**
  * A wrapper function that adds an options page to setup Dropbox Backup
  * @return void
@@ -105,6 +111,8 @@ function backup_to_dropbox_admin_menu() {
  * @return void
  */
 function backup_to_dropbox_admin_menu_contents() {
+	wpb2d_style();
+
 	$uri = rtrim(WP_PLUGIN_URL, '/') . '/wordpress-backup-to-dropbox';
 
 	if(version_compare(PHP_VERSION, MINUMUM_PHP_VERSION) >= 0)
@@ -118,6 +126,8 @@ function backup_to_dropbox_admin_menu_contents() {
  * @return void
  */
 function backup_to_dropbox_monitor() {
+	wpb2d_style();
+
 	if (!WP_Backup_Registry::dropbox()->is_authorized()) {
 		backup_to_dropbox_admin_menu_contents();
 	} else {
@@ -131,6 +141,8 @@ function backup_to_dropbox_monitor() {
  * @return void
  */
 function backup_to_dropbox_premium() {
+	wpb2d_style();
+
 	$uri = rtrim(WP_PLUGIN_URL, '/') . '/wordpress-backup-to-dropbox';
 	include('Views/wp-backup-to-dropbox-premium.php');
 }
@@ -342,20 +354,20 @@ function wpb2d_install_data() {
 }
 
 function wpb2d_init() {
-	//Check that the plugin's database tables are up to date
-	$wpdb = WP_Backup_Registry::db();
-	$tables = $wpdb->get_results("SHOW TABLES LIKE '{$wpdb->prefix}wpb2d_%%'");
-	if (count($tables) < 4 || WP_Backup_Registry::config()->get_option('database_version') < BACKUP_TO_DROPBOX_DATABASE_VERSION) {
-		wpb2d_install();
-		wpb2d_install_data();
+	try {
+		//Check that the plugin's database tables are up to date
+		$wpdb = WP_Backup_Registry::db();
+		$tables = $wpdb->get_results("SHOW TABLES LIKE '{$wpdb->prefix}wpb2d_%%'");
+		if (count($tables) < 4 || WP_Backup_Registry::config()->get_option('database_version') < BACKUP_TO_DROPBOX_DATABASE_VERSION) {
+			wpb2d_install();
+			wpb2d_install_data();
+		}
+
+		//Initilise extensions
+		WP_Backup_Extension_Manager::construct()->init();
+	} catch (Exception $e) {
+		error_log($e->getMessage());
 	}
-
-	//Initilise extensions
-	WP_Backup_Extension_Manager::construct()->init();
-
-	//Register stylesheet
-	wp_register_style('wpb2d-style', plugins_url('wp-backup-to-dropbox.css', __FILE__) );
-	wp_enqueue_style('wpb2d-style');
 }
 
 //More cron shedules
