@@ -96,6 +96,9 @@ class WP_Backup {
 							'file' => str_replace($dropbox_path . DIRECTORY_SEPARATOR, '', Dropbox_Facade::remove_secret($file)),
 							'mtime' => filemtime($file),
 						);
+
+						if ($processed_file && $processed_file->offset > 0)
+							$processed_files->file_complete($file);
 					}
 
 					$current_processed_files[] = $file;
@@ -120,13 +123,14 @@ class WP_Backup {
 				return;
 			}
 
-			$core = new WP_Backup_Database_Core();
-			$core->execute();
-
-			$plugins = new WP_Backup_Database_Plugins();
-			$plugins->execute();
-
 			if ($this->output->start()) {
+				//Create the SQL backups
+				$core = new WP_Backup_Database_Core();
+				$core->execute();
+
+				$plugins = new WP_Backup_Database_Plugins();
+				$plugins->execute();
+
 				//Backup the content dir first
 				$processed_files = $this->backup_path(WP_CONTENT_DIR, dirname(WP_CONTENT_DIR), array(
 					$core->get_file(),
