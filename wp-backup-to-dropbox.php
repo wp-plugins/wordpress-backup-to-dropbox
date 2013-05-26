@@ -3,7 +3,7 @@
 Plugin Name: WordPress Backup to Dropbox
 Plugin URI: http://wpb2d.com
 Description: Keep your valuable WordPress website, its media and database backed up to Dropbox in minutes with this sleek, easy to use plugin.
-Version: 1.5.3
+Version: 1.5.4
 Author: Michael De Wildt
 Author URI: http://www.mikeyd.com.au
 License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
@@ -21,7 +21,7 @@ License: Copyright 2011  Michael De Wildt  (email : michael.dewildt@gmail.com)
 		along with this program; if not, write to the Free Software
 		Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-define('BACKUP_TO_DROPBOX_VERSION', '1.5.3');
+define('BACKUP_TO_DROPBOX_VERSION', '1.5.4');
 define('BACKUP_TO_DROPBOX_DATABASE_VERSION', '1');
 
 define('EXTENSIONS_DIR', str_replace(DIRECTORY_SEPARATOR, '/', WP_CONTENT_DIR . '/plugins/wordpress-backup-to-dropbox/Extensions/'));
@@ -292,6 +292,19 @@ function wpb2d_install() {
 		file varchar(255) NOT NULL,
 		UNIQUE KEY name (name)
 	);");
+
+	//Ensure that there where no insert errors
+	$errors = array();
+
+	global $EZSQL_ERROR;
+	if ($EZSQL_ERROR) {
+		foreach ($EZSQL_ERROR as $error) {
+			if (preg_match('/^CREATE TABLE wpb2d_/', $error['query']))
+				$errors[] = $error['error_str'];
+		}
+
+		add_option('wpb2d-init-errors', implode($errors, '<br />'), false, 'no');
+	}
 }
 
 function wpb2d_install_data() {
@@ -370,6 +383,13 @@ function wpb2d_init() {
 	}
 }
 
+function get_sanitized_home_path() {
+	//Needed for get_home_path() function and may not be loaded
+	require_once(ABSPATH . 'wp-admin/includes/file.php');
+
+	return rtrim(str_replace('/', DIRECTORY_SEPARATOR, get_home_path()), DIRECTORY_SEPARATOR);
+}
+
 //More cron shedules
 add_filter('cron_schedules', 'backup_to_dropbox_cron_schedules');
 
@@ -385,13 +405,13 @@ register_activation_hook(__FILE__, 'wpb2d_install_data');
 
 add_action('plugins_loaded', 'wpb2d_init');
 
+//i18n language text domain
+load_plugin_textdomain('wpbtd', true, 'wordpress-backup-to-dropbox/Languages/');
+
 if (is_admin()) {
 	//WordPress filters and actions
 	add_action('wp_ajax_file_tree', 'backup_to_dropbox_file_tree');
 	add_action('wp_ajax_progress', 'backup_to_dropbox_progress');
-
-	//i18n language text domain
-	load_plugin_textdomain('wpbtd', true, 'wordpress-backup-to-dropbox/Languages/');
 
 	if (defined('MULTISITE') && MULTISITE) {
 		function custom_menu_order($menu_ord) {

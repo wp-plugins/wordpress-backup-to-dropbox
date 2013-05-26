@@ -2,7 +2,7 @@
 /**
  * A class with functions the perform a backup of WordPress
  *
- * @copyright Copyright (C) 2011-2012 Michael De Wildt. All rights reserved.
+ * @copyright Copyright (C) 2011-2013 Michael De Wildt. All rights reserved.
  * @author Michael De Wildt (http://www.mikeyd.com.au/)
  * @license This program is free software; you can redistribute it and/or modify
  *          it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ class WP_Backup_Config {
 	}
 
 	public static function get_backup_dir() {
-		return str_replace(DIRECTORY_SEPARATOR, '/', WP_CONTENT_DIR . '/backups');
+		return str_replace('/', DIRECTORY_SEPARATOR, WP_CONTENT_DIR . '/backups');
 	}
 
 	public function set_option($name, $value) {
@@ -177,6 +177,7 @@ class WP_Backup_Config {
 
 		$this->set_option('in_progress', false);
 		$this->set_option('is_running', false);
+		$this->set_option('last_backup_time', time());
 
 		return $this;
 	}

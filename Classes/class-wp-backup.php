@@ -2,7 +2,7 @@
 /**
  * A class with functions the perform a backup of WordPress
  *
- * @copyright Copyright (C) 2011-2012 Michael De Wildt. All rights reserved.
+ * @copyright Copyright (C) 2011-2013 Michael De Wildt. All rights reserved.
  * @author Michael De Wildt (http://www.mikeyd.com.au/)
  * @license This program is free software; you can redistribute it and/or modify
  *          it under the terms of the GNU General Public License as published by
@@ -31,6 +31,9 @@ class WP_Backup {
 		$this->config = WP_Backup_Registry::config();
 		$this->dropbox = WP_Backup_Registry::dropbox();
 		$this->output = $output ? $output : WP_Backup_Extension_Manager::construct()->get_output();
+
+		$this->db_core = new WP_Backup_Database_Core();
+		$this->db_plugins = new WP_Backup_Database_Plugins();
 	}
 
 	public function backup_path($path, $dropbox_path = null, $always_include = array()) {
@@ -38,7 +41,7 @@ class WP_Backup {
 			return;
 
 		if (!$dropbox_path)
-			$dropbox_path = ABSPATH;
+			$dropbox_path = get_sanitized_home_path();
 
 		$file_list = new File_List();
 
@@ -125,30 +128,24 @@ class WP_Backup {
 
 			if ($this->output->start()) {
 				//Create the SQL backups
-				$core = new WP_Backup_Database_Core();
-				$core->execute();
 
-				$plugins = new WP_Backup_Database_Plugins();
-				$plugins->execute();
+				$this->db_core->execute();
+				$this->db_plugins->execute();
 
 				//Backup the content dir first
 				$processed_files = $this->backup_path(WP_CONTENT_DIR, dirname(WP_CONTENT_DIR), array(
-					$core->get_file(),
-					$plugins->get_file()
+					$this->db_core->get_file(),
+					$this->db_plugins->get_file()
 				));
 
 				//Now backup the blog root
-				$processed_files += $this->backup_path(ABSPATH);
+				$processed_files += $this->backup_path(get_sanitized_home_path());
 
 				//End any output extensions
 				$this->output->end();
 
 				//Record the number of files processed to make the progress meter more accurate
 				$this->config->set_option('total_file_count', $processed_files);
-
-				//Remove the backed up SQL files
-				$core->remove_file();
-				$plugins->remove_file();
 			}
 
 			$manager->complete();
@@ -168,7 +165,7 @@ class WP_Backup {
 				$root = true;
 			}
 
-			$this->output->set_root($root)->out(ABSPATH, WP_Backup_Registry::logger()->get_log_file());
+			$this->output->set_root($root)->out(get_sanitized_home_path(), WP_Backup_Registry::logger()->get_log_file());
 
 			$this->config
 				->complete()
@@ -184,6 +181,8 @@ class WP_Backup {
 			$manager->failure();
 			$this->stop();
 		}
+
+		$this->clean_up();
 	}
 
 	public function backup_now() {
@@ -195,6 +194,13 @@ class WP_Backup {
 
 	public function stop() {
 		$this->config->complete();
+		$this->clean_up();
+	}
+
+	private function clean_up() {
+		$this->db_core->remove_file();
+		$this->db_plugins->remove_file();
+		$this->output->clean_up();
 	}
 
 	private static function create_silence_file() {
