@@ -158,6 +158,8 @@ class WP_Backup {
 				(memory_get_usage(true) / 1048576)
 			));
 
+			$this->output->clean_up();
+			
 			//Process the log file using the default backup output
 			$root = false;
 			if (get_class($this->output) != 'WP_Backup_Output') {
@@ -200,7 +202,6 @@ class WP_Backup {
 	private function clean_up() {
 		$this->db_core->remove_file();
 		$this->db_plugins->remove_file();
-		$this->output->clean_up();
 	}
 
 	private static function create_silence_file() {
