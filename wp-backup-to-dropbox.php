@@ -3,7 +3,7 @@
 Plugin Name: WordPress Backup to Dropbox
 Plugin URI: http://wpb2d.com
 Description: Keep your valuable WordPress website, its media and database backed up to Dropbox in minutes with this sleek, easy to use plugin.
-Version: 1.6
+Version: 1.6.1
 Author: Michael De Wildt
 Author URI: http://www.mikeyd.com.au
 License: Copyright 2011-2013  Michael De Wildt  (email : michael.dewildt@gmail.com)
@@ -21,7 +21,7 @@ License: Copyright 2011-2013  Michael De Wildt  (email : michael.dewildt@gmail.c
 		along with this program; if not, write to the Free Software
 		Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-define('BACKUP_TO_DROPBOX_VERSION', '1.6');
+define('BACKUP_TO_DROPBOX_VERSION', '1.6.1');
 define('BACKUP_TO_DROPBOX_DATABASE_VERSION', '1');
 define('EXTENSIONS_DIR', str_replace('/', DIRECTORY_SEPARATOR, WP_CONTENT_DIR . '/plugins/wordpress-backup-to-dropbox/Extensions/'));
 define('CHUNKED_UPLOAD_THREASHOLD', 10485760); //10 MB
@@ -98,7 +98,7 @@ function backup_to_dropbox_admin_menu() {
 		$text = __('Backup Log', 'wpbtd');
 		add_submenu_page('backup-to-dropbox', $text, $text, 'activate_plugins', 'backup-to-dropbox-monitor', 'backup_to_dropbox_monitor');
 
-		WP_Backup_Extension_Manager::construct()->add_menu_items();
+		WP_Backup_Registry::extension_manager()->add_menu_items();
 
 		$text = __('Premium Extensions', 'wpbtd');
 		add_submenu_page('backup-to-dropbox', $text, $text, 'activate_plugins', 'backup-to-dropbox-premium', 'backup_to_dropbox_premium');
@@ -141,6 +141,8 @@ function backup_to_dropbox_monitor() {
  */
 function backup_to_dropbox_premium() {
 	wpb2d_style();
+	wp_enqueue_script('jquery-ui-core');
+	wp_enqueue_script('jquery-ui-tabs');
 
 	$uri = rtrim(WP_PLUGIN_URL, '/') . '/wordpress-backup-to-dropbox';
 	include('Views/wp-backup-to-dropbox-premium.php');
@@ -286,13 +288,6 @@ function wpb2d_install() {
 		UNIQUE KEY file (file)
 	);");
 
-	$table_name = $wpdb->prefix . 'wpb2d_premium_extensions';
-	dbDelta("CREATE TABLE $table_name (
-		name varchar(50) NOT NULL,
-		file varchar(255) NOT NULL,
-		UNIQUE KEY name (name)
-	);");
-
 	//Ensure that there where no insert errors
 	$errors = array();
 
@@ -319,8 +314,10 @@ function wpb2d_init() {
 			wpb2d_install();
 		}
 
-		//Initilise extensions
-		WP_Backup_Extension_Manager::construct()->init();
+        if (!get_option('wpb2d-premium-extensions')) {
+            add_option('wpb2d-premium-extensions', array(), false, 'no');
+        }
+
 	} catch (Exception $e) {
 		error_log($e->getMessage());
 	}
@@ -337,7 +334,7 @@ function get_sanitized_home_path() {
 		$home_path = ABSPATH;
 	}
 
-	return rtrim(str_replace('/', DIRECTORY_SEPARATOR, $home_path), DIRECTORY_SEPARATOR);
+	return rtrim(str_replace('/', DIRECTORY_SEPARATOR, get_home_path()), DIRECTORY_SEPARATOR);
 }
 
 //More cron shedules
