@@ -75,7 +75,6 @@ For news and updates please visit my blog - http://www.mikeyd.com.au/category/wo
 * German (de_DE) - [Bernhard Kau](http://kau-boys.de)
 * Chinese (zh_CN) - [HostUCan CN](http://www.hostucan.cn/)
 * Taiwanese (zh_TN) - [HostUCan](http://www.hostucan.com/)
-* French (fr_FR) - [Yassine HANINI](http://www.yassine-hanini.info/)
 * Persian (fa_IR) - [Reza-sh](http://www.rezaonline.net/blog)
 * Dutch (nl_NL) - [Rinze Hiddink](http://www.rinzehiddink.nl)
 * Hebrew (he_HE) - [Menachem](http://luckyboost.com)
