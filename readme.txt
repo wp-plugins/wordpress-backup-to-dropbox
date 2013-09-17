@@ -80,7 +80,6 @@ For news and updates please visit my blog - http://www.mikeyd.com.au/category/wo
 * Dutch (nl_NL) - [Rinze Hiddink](http://www.rinzehiddink.nl)
 * Hebrew (he_HE) - [Menachem](http://luckyboost.com)
 * Italian (it_IT) - [René Querin](http://q-design.it)
-* Hungarian (hu_HU) - [Lazarevics](http://hardverborze.tk)
 * Russian (ru_RU) - [Evgeny Vlasov](http://verha.net)
 * Sweedish (sv_SE) - [Webbyrå](http://webbyra.se)
 * Finland (fi_FI) - [Timo Leiniö](http://wpopas.fi)
