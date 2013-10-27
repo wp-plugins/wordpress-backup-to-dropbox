@@ -3,7 +3,7 @@ Contributors: michael.dewildt
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=38SEXDYP28CFA
 Tags: backup, dropbox
 Requires at least: 3.0
-Tested up to: 3.6
+Tested up to: 3.7
 Stable tag: trunk
 
 Keep your valuable WordPress website, its media and database backed up to Dropbox in minutes with this sleek, easy to use plugin.
@@ -66,24 +66,26 @@ Premium extensions can be purchased securely using [PayPal](http://www.paypal.co
 
 For news and updates please visit my blog - http://www.mikeyd.com.au/category/wordpress-backup-to-dropbox/
 
-= Translators =
+= Available in these languages =
 
-* Arabic (ar) - [Saif Maki](www.saif.cz.cc)
-* Brazilian Portuguese (pt_BR) - [Techload Informatica](http://www.techload.com.br)
-* Galician (gl_ES), Spanish (es_ES), Portuguese (pt_PT) - [WordPress Galego](http://gl.wordpress.org/)
-* Indonesian (id_ID) - [Bejana](http://www.bejana.com/)
-* German (de_DE) - [Bernhard Kau](http://kau-boys.de)
-* Chinese (zh_CN) - [HostUCan CN](http://www.hostucan.cn/)
-* Taiwanese (zh_TN) - [HostUCan](http://www.hostucan.com/)
-* Persian (fa_IR) - [Reza-sh](http://www.rezaonline.net/blog)
-* Dutch (nl_NL) - [Rinze Hiddink](http://www.rinzehiddink.nl)
-* Hebrew (he_HE) - [Menachem](http://luckyboost.com)
-* Italian (it_IT) - [René Querin](http://q-design.it)
-* Russian (ru_RU) - [Evgeny Vlasov](http://verha.net)
-* Sweedish (sv_SE) - [Webbyrå](http://webbyra.se)
-* Finland (fi_FI) - [Timo Leiniö](http://wpopas.fi)
-
-Help keep WPB2D's language files up ot date on [HunStart](https://code.google.com/p/wpbtd)
+* Arabic (ar)
+* Brazilian Portuguese (pt_BR)
+* Galician (gl_ES)
+* Spanish (es_ES)
+* Portuguese (pt_PT)
+* Indonesian (id_ID)
+* German (de_DE)
+* Chinese (zh_CN)
+* Taiwanese (zh_TN)
+* French (fr_FR)
+* Persian (fa_IR)
+* Dutch (nl_NL)
+* Hebrew (he_HE)
+* Italian (it_IT)
+* Hungarian (hu_HU)
+* Russian (ru_RU)
+* Sweedish (sv_SE)
+* Finland (fi_FI)
 
 == Installation ==
 
@@ -134,6 +136,18 @@ You can also install the zip [premium extension](http://wpb2d.com/premium) that 
 3. Premium Extensions: Add extra functionality with ease and a 60 day money back guarantee.
 
 == Changelog ==
+
+= 1.7 =
+* Code is now conforms to most of the PSR standards that are much better then the WP ones
+* Database dumps are now tracked so they can be resumed
+* Improved error handling around extension installs
+* Updated tests for better code coverage that revealed a few small bugs
+* Implemented a factory for better dependency injection and performance
+* Updated the Email Extension to use wp_mail so it will use setting set by other plugins like WP SMTP
+* Added a time stamp to Zips generated with the Zip Extension
+* Improved logging and estimation of percent complete
+* Add 'Settings saved' message and use default WP errors
+* Fix invalid UTF-8 sequence in argument error
 
 = 1.6.1 =
 * Added [Extendy](http://extendy.com) and improved extension installation user interface that fixes a few bugs and adds the ability to renew and buy bundles.

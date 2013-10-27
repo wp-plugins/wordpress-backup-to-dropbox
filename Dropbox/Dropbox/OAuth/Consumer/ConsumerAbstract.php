@@ -8,7 +8,7 @@
 * @subpackage Consumer
 */
 
-abstract class OAuth_Consumer_ConsumerAbstract
+abstract class Dropbox_OAuth_Consumer_ConsumerAbstract
 {
     // Dropbox web endpoint
     const WEB_URL = 'https://www.dropbox.com/1/';
@@ -49,8 +49,9 @@ abstract class OAuth_Consumer_ConsumerAbstract
     */
     public function getRequestToken()
     {
-        $url = API::API_URL . self::REQUEST_TOKEN_METHOD;
+        $url = Dropbox_API::API_URL . self::REQUEST_TOKEN_METHOD;
         $response = $this->fetch('POST', $url, '');
+
         return $this->parseTokenString($response['body']);
     }
 
@@ -69,6 +70,7 @@ abstract class OAuth_Consumer_ConsumerAbstract
         // Build the URL and redirect the user
         $query = '?' . http_build_query($params, '', '&');
         $url = self::WEB_URL . self::AUTHORISE_METHOD . $query;
+
         return $url;
     }
 
@@ -81,7 +83,8 @@ abstract class OAuth_Consumer_ConsumerAbstract
     public function getAccessToken()
     {
         // Get the signed request URL
-        $response = $this->fetch('POST', API::API_URL, self::ACCESS_TOKEN_METHOD);
+        $response = $this->fetch('POST', Dropbox_API::API_URL, self::ACCESS_TOKEN_METHOD);
+
         return $this->parseTokenString($response['body']);
     }
 
@@ -89,10 +92,10 @@ abstract class OAuth_Consumer_ConsumerAbstract
      * Generate signed request URL
      * See inline comments for description
      * @link http://tools.ietf.org/html/rfc5849#section-3.4
-     * @param string $method HTTP request method
-     * @param string $url API endpoint to send the request to
-     * @param string $call API call to send
-     * @param array $additional Additional parameters as an associative array
+     * @param  string $method     HTTP request method
+     * @param  string $url        API endpoint to send the request to
+     * @param  string $call       API call to send
+     * @param  array  $additional Additional parameters as an associative array
      * @return array
      */
     protected function getSignedRequest($method, $url, $call, array $additional = array())
@@ -125,7 +128,7 @@ abstract class OAuth_Consumer_ConsumerAbstract
 
         // URL encode each parameter to RFC3986 for use in the base string
         $encoded = array();
-        foreach($params as $param => $value) {
+        foreach ($params as $param => $value) {
             if ($value !== null) {
                 // If the value is a file upload (prefixed with @), replace it with
                 // the destination filename, the file path will be sent in POSTFIELDS
@@ -161,7 +164,7 @@ abstract class OAuth_Consumer_ConsumerAbstract
     /**
      * Generate the oauth_signature for a request
      * @param string $base Signature base string, used by HMAC-SHA1
-     * @param string $key Concatenated consumer and token secrets
+     * @param string $key  Concatenated consumer and token secrets
      */
     private function getSignature($base, $key)
     {
@@ -181,26 +184,30 @@ abstract class OAuth_Consumer_ConsumerAbstract
      * Set the token to use for OAuth requests
      * @param stdtclass $token A key secret pair
      */
-    public function setToken($token) {
+    public function setToken($token)
+    {
         if (!is_object($token))
             throw new Exception('Token is invalid.');
 
         $this->token = $token;
+
         return $this;
     }
 
-    public function resetToken() {
+    public function resetToken()
+    {
         $token = new stdClass;
         $token->oauth_token = false;
         $token->oauth_token_secret = false;
 
         $this->setToken($token);
+
         return $this;
     }
 
     /**
      * Set the OAuth signature method
-     * @param string $method Either PLAINTEXT or HMAC-SHA1
+     * @param  string $method Either PLAINTEXT or HMAC-SHA1
      * @return void
      */
     public function setSignatureMethod($method)
@@ -264,6 +271,7 @@ abstract class OAuth_Consumer_ConsumerAbstract
             $k = strtolower($k);
             $token->$k = $v;
         }
+
         return $token;
     }
 

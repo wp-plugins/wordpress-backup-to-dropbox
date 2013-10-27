@@ -8,7 +8,7 @@
 * @subpackage Consumer
 */
 
-class OAuth_Consumer_Curl extends OAuth_Consumer_ConsumerAbstract
+class Dropbox_OAuth_Consumer_Curl extends Dropbox_OAuth_Consumer_ConsumerAbstract
 {
     /**
      * Default cURL options
@@ -48,10 +48,10 @@ class OAuth_Consumer_Curl extends OAuth_Consumer_ConsumerAbstract
     /**
      * Execute an API call
      * @todo Improve error handling
-     * @param string $method The HTTP method
-     * @param string $url The API endpoint
-     * @param string $call The API method to call
-     * @param array $additional Additional parameters
+     * @param  string        $method     The HTTP method
+     * @param  string        $url        The API endpoint
+     * @param  string        $call       The API method to call
+     * @param  array         $additional Additional parameters
      * @return string|object stdClass
      */
     public function fetch($method, $url, $call, $additional = array())
@@ -106,13 +106,13 @@ class OAuth_Consumer_Curl extends OAuth_Consumer_ConsumerAbstract
 
         // Check if an error occurred and throw an Exception
         if (!empty($response['body']->error)) {
-        	// Dropbox returns error messages inconsistently...
-        	if ($response['body']->error instanceof stdClass) {
-        		$array = array_values((array) $response['body']->error);
-        		$response['body']->error = $array[0];
-        	}
+            // Dropbox returns error messages inconsistently...
+            if ($response['body']->error instanceof stdClass) {
+                $array = array_values((array) $response['body']->error);
+                $response['body']->error = $array[0];
+            }
 
-        	// Throw an Exception with the appropriate with the appropriate code
+            // Throw an Exception with the appropriate with the appropriate code
             throw new Exception($response['body']->error, $response['code']);
         }
 
@@ -121,7 +121,7 @@ class OAuth_Consumer_Curl extends OAuth_Consumer_ConsumerAbstract
 
     /**
      * Parse a cURL response
-     * @param string $response
+     * @param  string $response
      * @return array
      */
     private function parse($response)
@@ -172,6 +172,6 @@ class OAuth_Consumer_Curl extends OAuth_Consumer_ConsumerAbstract
      */
     public function getlastResponse()
     {
-    	return $this->lastResponse;
+        return $this->lastResponse;
     }
 }

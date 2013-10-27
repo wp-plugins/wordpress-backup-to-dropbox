@@ -18,23 +18,58 @@
  *          along with this program; if not, write to the Free Software
  *          Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110, USA.
  */
-class WP_Backup_Upload_Tracker {
+class WPB2D_Processed_DBTables extends WPB2D_Processed_Base
+{
+    const COMPLETE = -1;
 
-	private $processed_files;
+    protected function getTableName()
+    {
+        return 'dbtables';
+    }
 
-	public function __construct() {
-		$this->processed_files = new WP_Backup_Processed_Files();
-	}
+    protected function getId()
+    {
+        return 'name';
+    }
 
-	public function track_upload($file, $upload_id, $offset) {
-		WP_Backup_Registry::config()->die_if_stopped();
+    public function get_table($name)
+    {
+        foreach ($this->processed as $table) {
+            if ($table->name == $name) {
+                return $table;
+            }
+        }
+    }
 
-		$this->processed_files->update_file($file, $upload_id, $offset);
+    public function is_complete($name)
+    {
+        $table = $this->get_table($name);
 
-		WP_Backup_Registry::logger()->log(sprintf(
-			__("Uploaded %sMB of %sMB", 'wpbtd'),
-			round($offset / 1048576, 1),
-			round(filesize($file) / 1048576, 1)
-		));
-	}
+        if ($table) {
+            return $table->count == self::COMPLETE;
+        }
+
+        return false;
+    }
+
+    public function count_complete()
+    {
+        $i = 0;
+
+        foreach ($this->processed as $table) {
+            if ($table->count == self::COMPLETE) {
+                $i++;
+            }
+        }
+
+        return $i;
+    }
+
+    public function update_table($table, $count)
+    {
+        $this->upsert(array(
+            'name' => $table,
+            'count' => $count,
+        ));
+    }
 }
