@@ -2,7 +2,7 @@
 /**
  * This file contains the contents of the Dropbox admin monitor page.
  *
- * @copyright Copyright (C) 2011-2013 Michael De Wildt. All rights reserved.
+ * @copyright Copyright (C) 2011-2014 Awesoft Pty. Ltd. All rights reserved.
  * @author Michael De Wildt (http://www.mikeyd.com.au/)
  * @license This program is free software; you can redistribute it and/or modify
  *          it under the terms of the GNU General Public License as published by
@@ -65,7 +65,7 @@ if (array_key_exists('stop_backup', $_POST)) {
         reload();
     });
 </script>
-<div class="wrap">
+<div class="wrap" id="wpb2d">
     <div class="icon32"><img width="36px" height="36px"
                                  src="<?php echo $uri ?>/Images/WordPressBackupToDropbox_64.png"
                                  alt="WordPress Backup to Dropbox Logo"></div>

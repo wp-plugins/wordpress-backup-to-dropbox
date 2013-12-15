@@ -2,7 +2,7 @@
 /**
  * A facade class with wrapping functions to administer a dropbox account
  *
- * @copyright Copyright (C) 2011-2013 Michael De Wildt. All rights reserved.
+ * @copyright Copyright (C) 2011-2014 Awesoft Pty. Ltd. All rights reserved.
  * @author Michael De Wildt (http://www.mikeyd.com.au/)
  * @license This program is free software; you can redistribute it and/or modify
  *          it under the terms of the GNU General Public License as published by
@@ -164,7 +164,7 @@ class WPB2D_DropboxFacade
 
     public function chunk_upload_file($path, $file, $processed_file)
     {
-        $offest = $offest_id = null;
+        $offest = $upload_id = null;
         if ($processed_file) {
             $offest = $processed_file->offset;
             $upload_id = $processed_file->uploadid;

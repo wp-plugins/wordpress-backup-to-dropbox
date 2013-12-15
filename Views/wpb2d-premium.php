@@ -106,7 +106,7 @@ function wpb2d_products($manager, $type, $extensions)
         $("#tabs").tabs();
     });
 </script>
-<div class="wrap premium">
+<div class="wrap premium" id="wpb2d">
     <div class="icon32"><img width="36px" height="36px"
                                  src="<?php echo $uri ?>/Images/WordPressBackupToDropbox_64.png"
                                  alt="WordPress Backup to Dropbox Logo"></div>
@@ -115,7 +115,7 @@ function wpb2d_products($manager, $type, $extensions)
 
     <?php settings_errors(); ?>
 
-    <h3><?php _e('Premium Extensions', 'wpbtd'); ?> <small class="heading--inline"><?php echo sprintf(__('powered by %s', 'wpbtd'), '<a href="http://extendy.com">Extendy</a>'); ?></small></h3>
+    <h3><?php _e('Premium Extensions', 'wpbtd'); ?></h3>
     <div>
         <p>
             <?php _e('Welcome to Premium Extensions. Please choose an extension below to enhance WordPress Backup to Dropbox.', 'wpbtd'); ?>

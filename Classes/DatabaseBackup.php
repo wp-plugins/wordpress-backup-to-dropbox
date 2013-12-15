@@ -2,7 +2,7 @@
 /**
  * A class with functions the perform a backup of the WordPress database
  *
- * @copyright Copyright (C) 2011-2013 Michael De Wildt. All rights reserved.
+ * @copyright Copyright (C) 2011-2014 Awesoft Pty. Ltd. All rights reserved.
  * @author Michael De Wildt (http://www.mikeyd.com.au/)
  * @license This program is free software; you can redistribute it and/or modify
  *          it under the terms of the GNU General Public License as published by
@@ -66,17 +66,22 @@ class WPB2D_DatabaseBackup
         $tables = $this->database->get_results('SHOW TABLES', ARRAY_N);
 
         foreach ($tables as $t) {
-            $table = $t[0];
-            if (!$this->processed->is_complete($table)) {
-                $count = $this->processed->get_table($table)->count * self::SELECT_QUERY_LIMIT;
+            $tableName = $t[0];
+            if (!$this->processed->is_complete($tableName)) {
+                $table = $this->processed->get_table($tableName);
 
-                if ($count > 0) {
-                    WPB2D_Factory::get('logger')->log(sprintf(__("Resuming table '%s' at row %s.", 'wpbtd'), $table, $count));
+                $count = 0;
+                if ($table) {
+                    $count = $table->count * self::SELECT_QUERY_LIMIT;
                 }
 
-                $this->backup_database_table($table, $count);
+                if ($count > 0) {
+                    WPB2D_Factory::get('logger')->log(sprintf(__("Resuming table '%s' at row %s.", 'wpbtd'), $tableName, $count));
+                }
 
-                WPB2D_Factory::get('logger')->log(sprintf(__("Processed table '%s'.", 'wpbtd'), $table));
+                $this->backup_database_table($tableName, $count);
+
+                WPB2D_Factory::get('logger')->log(sprintf(__("Processed table '%s'.", 'wpbtd'), $tableName));
             }
         }
     }
