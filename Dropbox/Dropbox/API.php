@@ -156,7 +156,7 @@ class Dropbox_API
                 // Read from the file handle until EOF, uploading each chunk
                 while ($data = fread($handle, $this->chunkSize)) {
                     // Open a temporary file handle and write a chunk of data to it
-                    $chunkHandle = fopen('php://memory', 'rw');
+                    $chunkHandle = fopen('php://temp', 'rw');
                     fwrite($chunkHandle, $data);
 
                     // Set the file, request parameters and send the request
