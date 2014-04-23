@@ -2,8 +2,8 @@
 /*
 Plugin Name: WordPress Backup to Dropbox
 Plugin URI: http://wpb2d.com
-Description: Keep your valuable WordPress website, its media and database backed up to Dropbox in minutes with this sleek, easy to use plugin.
-Version: 1.8.1
+Description: Keep your valuable WordPress website, its media and database backed up in Dropbox! Need help? Please email support@wpb2d.com
+Version: 1.9
 Author: Michael De Wildt
 Author URI: http://www.mikeyd.com.au
 License: Copyright 2011-2014 Awesoft Pty. Ltd. (email : michael.dewildt@gmail.com)
@@ -21,11 +21,12 @@ License: Copyright 2011-2014 Awesoft Pty. Ltd. (email : michael.dewildt@gmail.co
         along with this program; if not, write to the Free Software
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-define('BACKUP_TO_DROPBOX_VERSION', '1.8.1');
+define('BACKUP_TO_DROPBOX_VERSION', '1.9');
 define('BACKUP_TO_DROPBOX_DATABASE_VERSION', '2');
 define('EXTENSIONS_DIR', str_replace('/', DIRECTORY_SEPARATOR, WP_CONTENT_DIR . '/plugins/wordpress-backup-to-dropbox/Classes/Extension/'));
 define('CHUNKED_UPLOAD_THREASHOLD', 10485760); //10 MB
 define('MINUMUM_PHP_VERSION', '5.2.16');
+define('NO_ACTIVITY_WAIT_TIME', 300); //5 mins to allow for socket timeouts and long uploads
 
 if (function_exists('spl_autoload_register')) {
     spl_autoload_register('wpb2d_autoload');
@@ -203,8 +204,7 @@ function monitor_dropbox_backup()
     $config = WPB2D_Factory::get('config');
     $mtime = filemtime(WPB2D_Factory::get('logger')->get_log_file());
 
-    //5 mins to allow for socket timeouts and long uploads
-    if ($config->get_option('in_progress') && ($mtime < time() - 300)) {
+    if ($config->get_option('in_progress') && ($mtime < time() - NO_ACTIVITY_WAIT_TIME)) {
         WPB2D_Factory::get('logger')->log(sprintf(__('There has been no backup activity for a long time. Attempting to resume the backup.' , 'wpbtd'), 5));
         $config->set_option('is_running', false);
 
